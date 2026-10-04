@@ -1,5 +1,5 @@
 import type { User } from "@bridgeed/shared/src/types/user";
-import type { UserRole } from "@bridgeed/shared/src/constants/roles.ts";
+import type { UserRole } from "@bridgeed/shared/src/constants/roles";
 import { UserRepository } from "../repositories/user.repository";
 
 export interface CreateUserInput {
@@ -10,8 +10,8 @@ export interface CreateUserInput {
 export class UserService {
   constructor(private readonly userRepository: UserRepository) {}
 
-  createUser(input: CreateUserInput): User {
-    const existingUser = this.userRepository.findByEmail(input.email);
+  async createUser(input: CreateUserInput): Promise<User> {
+    const existingUser = await this.userRepository.findByEmail(input.email);
 
     if (existingUser) {
       throw new Error("A user with this email already exists");
@@ -30,7 +30,7 @@ export class UserService {
     return this.userRepository.create(user);
   }
 
-  getUserById(id: string): User | null {
+  async getUserById(id: string): Promise<User | null> {
     return this.userRepository.findById(id);
   }
 }

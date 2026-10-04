@@ -1,0 +1,90 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id             String          @id @default(uuid())
+  email          String          @unique
+  role           UserRole
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  studentProfile StudentProfile?
+}
+
+model StudentProfile {
+  userId          String            @id
+  name            String
+  username        String            @unique
+  bio             String?
+  universityId    String?
+  degree          String?
+  branch          String?
+  graduationYear  Int?
+  profileImageUrl String?
+  location        String?
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+  interests       StudentInterest[]
+  university      University?       @relation(fields: [universityId], references: [id])
+  user            User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  skills          StudentSkill[]
+}
+
+model University {
+  id         String           @id @default(uuid())
+  name       String
+  country    String
+  state      String?
+  city       String?
+  websiteUrl String?
+  verified   Boolean          @default(false)
+  createdAt  DateTime         @default(now())
+  updatedAt  DateTime         @updatedAt
+  students   StudentProfile[]
+}
+
+model Skill {
+  id        String         @id @default(uuid())
+  name      String         @unique
+  createdAt DateTime       @default(now())
+  students  StudentSkill[]
+}
+
+model Interest {
+  id        String            @id @default(uuid())
+  name      String            @unique
+  createdAt DateTime          @default(now())
+  students  StudentInterest[]
+}
+
+model StudentSkill {
+  studentId String
+  skillId   String
+  createdAt DateTime       @default(now())
+  skill     Skill          @relation(fields: [skillId], references: [id], onDelete: Cascade)
+  student   StudentProfile @relation(fields: [studentId], references: [userId], onDelete: Cascade)
+
+  @@id([studentId, skillId])
+}
+
+model StudentInterest {
+  studentId  String
+  interestId String
+  createdAt  DateTime       @default(now())
+  interest   Interest       @relation(fields: [interestId], references: [id], onDelete: Cascade)
+  student    StudentProfile @relation(fields: [studentId], references: [userId], onDelete: Cascade)
+
+  @@id([studentId, interestId])
+}
+
+enum UserRole {
+  STUDENT
+  MENTOR
+  EDUCATOR
+  ADMIN
+}
