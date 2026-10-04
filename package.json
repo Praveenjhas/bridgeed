@@ -1,0 +1,22 @@
+{
+  "name": "bridgeed",
+  "version": "0.1.0",
+  "private": true,
+  "description": "BridgeEd - Educational social networking platform",
+  "workspaces": [
+    "apps/mobile",
+    "apps/api",
+    "packages/shared"
+  ],
+  "scripts": {
+    "dev": "npm run dev --workspaces",
+    "typecheck": "npm run typecheck --workspaces",
+    "lint": "npm run lint --workspaces",
+    "test": "npm run test --workspaces"
+  },
+  "devDependencies": {
+    "eslint": "^10.12.0",
+    "prettier": "^3.9.9",
+    "typescript": "^7.0.2"
+  }
+}
