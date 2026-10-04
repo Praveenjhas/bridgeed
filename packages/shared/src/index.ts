@@ -1,10 +1,18 @@
-export const BRIDGEED_APP_NAME = "BridgeEd" as const;
+export { USER_ROLES, type UserRole } from "./constants/roles";
 
-export const USER_ROLES = {
-  STUDENT: "student",
-  MENTOR: "mentor",
-  EDUCATOR: "educator",
-  ADMIN: "admin",
-} as const;
+export {
+  CONNECTION_STATUSES,
+  type ConnectionStatus,
+  type Connection,
+} from "./types/connection";
 
-export type UserRole = (typeof USER_ROLES)[keyof typeof USER_ROLES];
+export type { User, StudentProfile } from "./types/user";
+
+export type { University } from "./types/university";
+
+export {
+  COMMUNITY_MEMBER_ROLES,
+  type CommunityMemberRole,
+  type Community,
+  type CommunityMember,
+} from "./types/community";
