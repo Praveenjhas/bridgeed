@@ -194,6 +194,53 @@ export class PostRepository {
     });
   }
 
+  /**
+   * Batched variant of `findDetailsById`, used by the feed to hydrate only the
+   * Top-K posts it selected. One query materializes the whole page instead of
+   * one detail lookup per item, and deleted posts are never returned.
+   */
+  async findDetailsByIds(ids: string[]): Promise<PostDetails[]> {
+    if (ids.length === 0) {
+      return [];
+    }
+
+    const records = await prisma.post.findMany({
+      where: {
+        id: { in: ids },
+        deletedAt: null,
+      },
+      select: {
+        ...postColumns,
+        author: {
+          select: authorColumns,
+        },
+        community: true,
+        _count: {
+          select: {
+            comments: {
+              where: {
+                deletedAt: null,
+              },
+            },
+            reactions: {
+              where: {
+                type: "LIKE",
+              },
+            },
+          },
+        },
+      },
+    });
+
+    return records.map((record) => ({
+      ...toPost(record),
+      author: toAuthor(record.author),
+      community: toCommunity(record.community),
+      commentCount: record._count.comments,
+      likeCount: record._count.reactions,
+    }));
+  }
+
   async findDetailsById(id: string): Promise<PostDetails | null> {
     const record = await prisma.post.findUnique({
       where: {

@@ -30,6 +30,11 @@ import {
   REACTION_TYPE_INVALID_MESSAGE,
   REACTION_USER_REQUIRED_MESSAGE,
 } from "../services/reaction.service";
+import {
+  FEED_ACTOR_REQUIRED_MESSAGE,
+  FEED_CURSOR_INVALID_MESSAGE,
+  FEED_LIMIT_INVALID_MESSAGE,
+} from "../services/feed.service";
 
 /** Maps the post domain errors raised by the service layer onto HTTP errors. */
 export function mapPostDomainError(error: unknown): MappedHttpError | null {
@@ -105,6 +110,25 @@ export function mapReactionDomainError(error: unknown): MappedHttpError | null {
 }
 
 /**
+ * Maps the feed domain errors raised by the service layer onto HTTP errors.
+ * A feed cursor that this API did not issue, or a limit that is not a positive
+ * integer, is a client error rather than a server one.
+ */
+export function mapFeedDomainError(error: unknown): MappedHttpError | null {
+  const message = error instanceof Error ? error.message : undefined;
+
+  switch (message) {
+    case FEED_ACTOR_REQUIRED_MESSAGE:
+    case FEED_LIMIT_INVALID_MESSAGE:
+    case FEED_CURSOR_INVALID_MESSAGE:
+      return { status: 400, error: message };
+
+    default:
+      return null;
+  }
+}
+
+/**
  * Resolves a content domain error, reusing the community mapping for the
  * membership and profile rules that posts, comments and reactions share.
  */
@@ -113,6 +137,7 @@ export function mapContentDomainError(error: unknown): MappedHttpError | null {
     mapPostDomainError(error) ??
     mapCommentDomainError(error) ??
     mapReactionDomainError(error) ??
+    mapFeedDomainError(error) ??
     mapCommunityDomainError(error)
   );
 }

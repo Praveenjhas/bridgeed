@@ -44,6 +44,15 @@ export {
 } from "./types/post";
 
 export {
+  FEED_DEFAULT_LIMIT,
+  FEED_MAX_LIMIT,
+  FEED_REASON_CODES,
+  type FeedReasonCode,
+  type FeedItem,
+  type FeedPage,
+} from "./types/feed";
+
+export {
   type Comment,
   type CommentWithAuthor,
   type CommentListItem,

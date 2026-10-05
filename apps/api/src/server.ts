@@ -26,6 +26,7 @@ import {
   commentReactionRouter,
   postReactionRouter,
 } from "./routes/reaction.routes";
+import { feedRouter } from "./routes/feed.routes";
 dotenv.config();
 
 const app = express();
@@ -69,6 +70,7 @@ app.use("/api/v1/posts/:postId/reactions", postReactionRouter);
 app.use("/api/v1/posts", postRouter);
 app.use("/api/v1/comments/:commentId/reactions", commentReactionRouter);
 app.use("/api/v1/comments", commentRouter);
+app.use("/api/v1/feed", feedRouter);
 app.listen(PORT, () => {
   console.log(`BridgeEd API running on http://localhost:${PORT}`);
 });

@@ -18,6 +18,7 @@ import {
   COMMUNITY_TYPES,
   USER_ROLES,
 } from "@bridgeed/shared";
+import type { Prisma } from "../src/generated/prisma/client";
 import { prisma } from "../src/config/prisma";
 import { COMMUNITY_SLUG_TAKEN_MESSAGE } from "../src/repositories/community.repository";
 import {
@@ -70,6 +71,35 @@ interface ApiResult {
 interface SmokeContext {
   createdUserIds: string[];
   createdCommunityIds: string[];
+}
+
+/** Prefix every row created by this run carries in its unique key. */
+const RUN_PREFIX = `${RUN_ID}-`;
+/** Skill and interest rows seeded for a run carry that run's id in their name. */
+const RUN_SKILL_NAME_PREFIX = "Smoke Skill ";
+const RUN_INTEREST_NAME_PREFIX = "Smoke Interest ";
+
+/** User and community ids this run can be shown to own. */
+interface RunRowIds {
+  userIds: string[];
+  communityIds: string[];
+}
+
+/** Counts captured before the run starts, so the audit can prove nothing else was lost. */
+interface BaselineCounts {
+  users: number;
+  profiles: number;
+  communities: number;
+  memberships: number;
+  posts: number;
+  comments: number;
+  postReactions: number;
+  commentReactions: number;
+  connections: number;
+  studentSkills: number;
+  studentInterests: number;
+  skills: number;
+  interests: number;
 }
 
 const failures: string[] = [];
@@ -1811,45 +1841,458 @@ async function setupStudents(context: SmokeContext): Promise<SmokeUsers> {
   };
 }
 
+/** Users this run owns: tracked ids plus every row stamped with `RUN_PREFIX`. */
+function userWhere(context: SmokeContext): Prisma.UserWhereInput {
+  return {
+    OR: [
+      { id: { in: context.createdUserIds } },
+      { email: { startsWith: RUN_PREFIX } },
+    ],
+  };
+}
+
+/** Student profiles this run owns: tracked user ids plus `RUN_PREFIX` usernames. */
+function profileWhere(context: SmokeContext): Prisma.StudentProfileWhereInput {
+  return {
+    OR: [
+      { userId: { in: context.createdUserIds } },
+      { username: { startsWith: RUN_PREFIX } },
+    ],
+  };
+}
+
+/** Communities this run owns: tracked ids plus `RUN_PREFIX` slugs and names. */
+function communityWhere(context: SmokeContext): Prisma.CommunityWhereInput {
+  return {
+    OR: [
+      { id: { in: context.createdCommunityIds } },
+      { slug: { startsWith: RUN_PREFIX } },
+      { name: { endsWith: ` ${RUN_ID}` } },
+    ],
+  };
+}
+
+/** Skill rows seeded for this run (the name carries this run's id). */
+function skillWhere(): Prisma.SkillWhereInput {
+  return {
+    AND: [
+      { name: { startsWith: RUN_SKILL_NAME_PREFIX } },
+      { name: { endsWith: RUN_ID } },
+    ],
+  };
+}
+
+/** Interest rows seeded for this run (the name carries this run's id). */
+function interestWhere(): Prisma.InterestWhereInput {
+  return {
+    AND: [
+      { name: { startsWith: RUN_INTEREST_NAME_PREFIX } },
+      { name: { endsWith: RUN_ID } },
+    ],
+  };
+}
+
+function uniqueIds(values: string[]): string[] {
+  return [...new Set(values)];
+}
+
 /**
- * Removes every row created by this run. Memberships are deleted through the
- * community/user relations so the cleanup works even when a check failed early.
+ * Resolves every user and community id this run can be shown to own. Tracked ids
+ * are merged with the rows stamped with this run's prefix, so rows created just
+ * before a failing check (and therefore never tracked) are still removed.
+ */
+async function resolveRunRowIds(context: SmokeContext): Promise<RunRowIds> {
+  try {
+    const users = await prisma.user.findMany({
+      where: userWhere(context),
+      select: { id: true },
+    });
+    const profiles = await prisma.studentProfile.findMany({
+      where: profileWhere(context),
+      select: { userId: true },
+    });
+    const communities = await prisma.community.findMany({
+      where: communityWhere(context),
+      select: { id: true },
+    });
+
+    return {
+      userIds: uniqueIds([
+        ...context.createdUserIds,
+        ...users.map((user) => user.id),
+        ...profiles.map((profile) => profile.userId),
+      ]),
+      communityIds: uniqueIds([
+        ...context.createdCommunityIds,
+        ...communities.map((community) => community.id),
+      ]),
+    };
+  } catch (error) {
+    console.error("cleanup: could not resolve run rows, falling back to tracked ids", error);
+    process.exitCode = 1;
+
+    return {
+      userIds: uniqueIds(context.createdUserIds),
+      communityIds: uniqueIds(context.createdCommunityIds),
+    };
+  }
+}
+
+/** Collects ids for one node of the run's graph without aborting the cleanup. */
+async function collectIds(
+  label: string,
+  run: () => Promise<{ id: string }[]>,
+): Promise<string[]> {
+  try {
+    const rows = await run();
+
+    return rows.map((row) => row.id);
+  } catch (error) {
+    console.error(`cleanup: ${label} lookup failed`, error);
+    process.exitCode = 1;
+
+    return [];
+  }
+}
+
+/** Runs one delete step; a failure is reported but never blocks the other steps. */
+async function deleteStep(
+  label: string,
+  run: () => Promise<{ count: number }>,
+): Promise<number> {
+  try {
+    const result = await run();
+
+    return result.count;
+  } catch (error) {
+    console.error(`cleanup: ${label} failed`, error);
+    process.exitCode = 1;
+
+    return 0;
+  }
+}
+
+
+/**
+ * Removes every row created by this run. Deletion walks from the leaf tables
+ * (reactions, comments, posts, connections, skills, interests, memberships) to
+ * the communities, profiles and users they belong to, so foreign keys are never
+ * violated and pre-existing rows are never touched.
  */
 async function cleanup(context: SmokeContext): Promise<void> {
   console.log("\n--- cleanup ---");
 
-  try {
-    const memberships = await prisma.communityMembership.deleteMany({
+  const { userIds, communityIds } = await resolveRunRowIds(context);
+
+  const postIds = await collectIds("post", () =>
+    prisma.post.findMany({
+      where: {
+        OR: [{ authorId: { in: userIds } }, { communityId: { in: communityIds } }],
+      },
+      select: { id: true },
+    }),
+  );
+
+  const commentIds = await collectIds("comment", () =>
+    prisma.comment.findMany({
+      where: {
+        OR: [{ authorId: { in: userIds } }, { postId: { in: postIds } }],
+      },
+      select: { id: true },
+    }),
+  );
+
+  const postReactions = await deleteStep("post reactions", () =>
+    prisma.postReaction.deleteMany({
+      where: {
+        OR: [{ postId: { in: postIds } }, { userId: { in: userIds } }],
+      },
+    }),
+  );
+
+  const commentReactions = await deleteStep("comment reactions", () =>
+    prisma.commentReaction.deleteMany({
+      where: {
+        OR: [{ commentId: { in: commentIds } }, { userId: { in: userIds } }],
+      },
+    }),
+  );
+
+  const comments = await deleteStep("comments", () =>
+    prisma.comment.deleteMany({
       where: {
         OR: [
-          { communityId: { in: context.createdCommunityIds } },
-          { userId: { in: context.createdUserIds } },
+          { id: { in: commentIds } },
+          { postId: { in: postIds } },
+          { authorId: { in: userIds } },
         ],
       },
-    });
+    }),
+  );
 
-    const communities = await prisma.community.deleteMany({
-      where: { id: { in: context.createdCommunityIds } },
-    });
+  const posts = await deleteStep("posts", () =>
+    prisma.post.deleteMany({
+      where: {
+        OR: [
+          { id: { in: postIds } },
+          { communityId: { in: communityIds } },
+          { authorId: { in: userIds } },
+        ],
+      },
+    }),
+  );
 
-    const profiles = await prisma.studentProfile.deleteMany({
-      where: { userId: { in: context.createdUserIds } },
-    });
+  const connections = await deleteStep("connections", () =>
+    prisma.connection.deleteMany({
+      where: {
+        OR: [
+          { requesterId: { in: userIds } },
+          { receiverId: { in: userIds } },
+          { blockedById: { in: userIds } },
+        ],
+      },
+    }),
+  );
 
-    const users = await prisma.user.deleteMany({
-      where: { id: { in: context.createdUserIds } },
-    });
+  const studentSkills = await deleteStep("student skills", () =>
+    prisma.studentSkill.deleteMany({
+      where: { studentId: { in: userIds } },
+    }),
+  );
 
-    console.log(
-      `removed ${memberships.count} memberships, ${communities.count} communities, ` +
-        `${profiles.count} student profiles, ${users.count} users`,
-    );
-  } catch (error) {
-    console.error("cleanup failed", error);
-    process.exitCode = 1;
-  } finally {
-    await prisma.$disconnect();
-  }
+  const studentInterests = await deleteStep("student interests", () =>
+    prisma.studentInterest.deleteMany({
+      where: { studentId: { in: userIds } },
+    }),
+  );
+
+  const skills = await deleteStep("skills", () =>
+    prisma.skill.deleteMany({ where: skillWhere() }),
+  );
+
+  const interests = await deleteStep("interests", () =>
+    prisma.interest.deleteMany({ where: interestWhere() }),
+  );
+
+  const memberships = await deleteStep("memberships", () =>
+    prisma.communityMembership.deleteMany({
+      where: {
+        OR: [
+          { communityId: { in: communityIds } },
+          { userId: { in: userIds } },
+        ],
+      },
+    }),
+  );
+
+  const communities = await deleteStep("communities", () =>
+    prisma.community.deleteMany({ where: communityWhere(context) }),
+  );
+
+  const profiles = await deleteStep("student profiles", () =>
+    prisma.studentProfile.deleteMany({ where: profileWhere(context) }),
+  );
+
+  const users = await deleteStep("users", () =>
+    prisma.user.deleteMany({ where: userWhere(context) }),
+  );
+
+  console.log(
+    `removed ${postReactions} post reactions, ${commentReactions} comment reactions, ` +
+      `${comments} comments, ${posts} posts, ${connections} connections, ` +
+      `${studentSkills} student skills, ${studentInterests} student interests, ` +
+      `${skills} skills, ${interests} interests, ${memberships} memberships, ` +
+      `${communities} communities, ${profiles} student profiles, ${users} users`,
+  );
+}
+
+/** Snapshot of the dev database before the run, so the audit can prove nothing else was lost. */
+async function readBaseline(): Promise<BaselineCounts> {
+  return {
+    users: await prisma.user.count(),
+    profiles: await prisma.studentProfile.count(),
+    communities: await prisma.community.count(),
+    memberships: await prisma.communityMembership.count(),
+    posts: await prisma.post.count(),
+    comments: await prisma.comment.count(),
+    postReactions: await prisma.postReaction.count(),
+    commentReactions: await prisma.commentReaction.count(),
+    connections: await prisma.connection.count(),
+    studentSkills: await prisma.studentSkill.count(),
+    studentInterests: await prisma.studentInterest.count(),
+    skills: await prisma.skill.count(),
+    interests: await prisma.interest.count(),
+  };
+}
+
+/**
+ * Confirms that no row created by this run survived (including rows that were
+ * never tracked, matched through this run's `RUN_ID` prefix) and that no
+ * pre-existing row was deleted.
+ */
+async function auditCleanup(
+  context: SmokeContext,
+  baseline: BaselineCounts,
+): Promise<void> {
+  console.log("\n--- cleanup audit ---");
+
+  const { userIds, communityIds } = await resolveRunRowIds(context);
+
+  const leftoverUsers = await prisma.user.count({ where: userWhere(context) });
+  const leftoverProfiles = await prisma.studentProfile.count({
+    where: profileWhere(context),
+  });
+  const leftoverCommunities = await prisma.community.count({
+    where: communityWhere(context),
+  });
+  const leftoverTrackedUsers = await prisma.user.count({
+    where: { id: { in: context.createdUserIds } },
+  });
+  const leftoverTrackedProfiles = await prisma.studentProfile.count({
+    where: { userId: { in: context.createdUserIds } },
+  });
+  const leftoverTrackedCommunities = await prisma.community.count({
+    where: { id: { in: context.createdCommunityIds } },
+  });
+  const leftoverMemberships = await prisma.communityMembership.count({
+    where: {
+      OR: [
+        { communityId: { in: communityIds } },
+        { userId: { in: userIds } },
+      ],
+    },
+  });
+  const leftoverPosts = await prisma.post.count({
+    where: {
+      OR: [
+        { communityId: { in: communityIds } },
+        { authorId: { in: userIds } },
+      ],
+    },
+  });
+  const leftoverComments = await prisma.comment.count({
+    where: { authorId: { in: userIds } },
+  });
+  const leftoverPostReactions = await prisma.postReaction.count({
+    where: { userId: { in: userIds } },
+  });
+  const leftoverCommentReactions = await prisma.commentReaction.count({
+    where: { userId: { in: userIds } },
+  });
+  const leftoverConnections = await prisma.connection.count({
+    where: {
+      OR: [
+        { requesterId: { in: userIds } },
+        { receiverId: { in: userIds } },
+        { blockedById: { in: userIds } },
+      ],
+    },
+  });
+  const leftoverStudentSkills = await prisma.studentSkill.count({
+    where: { studentId: { in: userIds } },
+  });
+  const leftoverStudentInterests = await prisma.studentInterest.count({
+    where: { studentId: { in: userIds } },
+  });
+  const leftoverSkills = await prisma.skill.count({ where: skillWhere() });
+  const leftoverInterests = await prisma.interest.count({ where: interestWhere() });
+
+  expectEqual("audit: leftover test users", leftoverUsers, 0);
+  expectEqual("audit: leftover test student profiles", leftoverProfiles, 0);
+  expectEqual("audit: leftover test communities", leftoverCommunities, 0);
+  expectEqual("audit: leftover tracked users", leftoverTrackedUsers, 0);
+  expectEqual("audit: leftover tracked student profiles", leftoverTrackedProfiles, 0);
+  expectEqual("audit: leftover tracked communities", leftoverTrackedCommunities, 0);
+  expectEqual("audit: leftover test memberships", leftoverMemberships, 0);
+  expectEqual("audit: leftover test posts", leftoverPosts, 0);
+  expectEqual("audit: leftover test comments", leftoverComments, 0);
+  expectEqual("audit: leftover test post reactions", leftoverPostReactions, 0);
+  expectEqual("audit: leftover test comment reactions", leftoverCommentReactions, 0);
+  expectEqual("audit: leftover test connections", leftoverConnections, 0);
+  expectEqual("audit: leftover test student skills", leftoverStudentSkills, 0);
+  expectEqual("audit: leftover test student interests", leftoverStudentInterests, 0);
+  expectEqual("audit: leftover test skills", leftoverSkills, 0);
+  expectEqual("audit: leftover test interests", leftoverInterests, 0);
+
+  const currentUsers = await prisma.user.count();
+  const currentProfiles = await prisma.studentProfile.count();
+  const currentCommunities = await prisma.community.count();
+  const currentMemberships = await prisma.communityMembership.count();
+  const currentPosts = await prisma.post.count();
+  const currentComments = await prisma.comment.count();
+  const currentPostReactions = await prisma.postReaction.count();
+  const currentCommentReactions = await prisma.commentReaction.count();
+  const currentConnections = await prisma.connection.count();
+  const currentStudentSkills = await prisma.studentSkill.count();
+  const currentStudentInterests = await prisma.studentInterest.count();
+  const currentSkills = await prisma.skill.count();
+  const currentInterests = await prisma.interest.count();
+
+  expectTrue(
+    "audit: pre-existing users were not deleted",
+    currentUsers >= baseline.users,
+    { baseline: baseline.users, current: currentUsers },
+  );
+  expectTrue(
+    "audit: pre-existing student profiles were not deleted",
+    currentProfiles >= baseline.profiles,
+    { baseline: baseline.profiles, current: currentProfiles },
+  );
+  expectTrue(
+    "audit: pre-existing communities were not deleted",
+    currentCommunities >= baseline.communities,
+    { baseline: baseline.communities, current: currentCommunities },
+  );
+  expectTrue(
+    "audit: pre-existing memberships were not deleted",
+    currentMemberships >= baseline.memberships,
+    { baseline: baseline.memberships, current: currentMemberships },
+  );
+  expectTrue(
+    "audit: pre-existing posts were not deleted",
+    currentPosts >= baseline.posts,
+    { baseline: baseline.posts, current: currentPosts },
+  );
+  expectTrue(
+    "audit: pre-existing comments were not deleted",
+    currentComments >= baseline.comments,
+    { baseline: baseline.comments, current: currentComments },
+  );
+  expectTrue(
+    "audit: pre-existing post reactions were not deleted",
+    currentPostReactions >= baseline.postReactions,
+    { baseline: baseline.postReactions, current: currentPostReactions },
+  );
+  expectTrue(
+    "audit: pre-existing comment reactions were not deleted",
+    currentCommentReactions >= baseline.commentReactions,
+    { baseline: baseline.commentReactions, current: currentCommentReactions },
+  );
+  expectTrue(
+    "audit: pre-existing connections were not deleted",
+    currentConnections >= baseline.connections,
+    { baseline: baseline.connections, current: currentConnections },
+  );
+  expectTrue(
+    "audit: pre-existing student skills were not deleted",
+    currentStudentSkills >= baseline.studentSkills,
+    { baseline: baseline.studentSkills, current: currentStudentSkills },
+  );
+  expectTrue(
+    "audit: pre-existing student interests were not deleted",
+    currentStudentInterests >= baseline.studentInterests,
+    { baseline: baseline.studentInterests, current: currentStudentInterests },
+  );
+  expectTrue(
+    "audit: pre-existing skills were not deleted",
+    currentSkills >= baseline.skills,
+    { baseline: baseline.skills, current: currentSkills },
+  );
+  expectTrue(
+    "audit: pre-existing interests were not deleted",
+    currentInterests >= baseline.interests,
+    { baseline: baseline.interests, current: currentInterests },
+  );
 }
 
 async function main(): Promise<void> {
@@ -1860,6 +2303,8 @@ async function main(): Promise<void> {
     createdUserIds: [],
     createdCommunityIds: [],
   };
+
+  const baseline = await readBaseline();
 
   try {
     const users = await setupStudents(context);
@@ -1884,6 +2329,8 @@ async function main(): Promise<void> {
     await runRegressionChecks(ids, users);
   } finally {
     await cleanup(context);
+    await auditCleanup(context, baseline);
+    await prisma.$disconnect();
   }
 
   if (failures.length > 0) {

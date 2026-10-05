@@ -117,6 +117,12 @@ export interface CreateMembershipInput {
   status: CommunityMembershipStatus;
 }
 
+export function toCommunityMemberRole(
+  record: CommunityMemberRoleRecord,
+): CommunityMemberRole {
+  return roleByDatabaseRole[record];
+}
+
 export function toCommunityMembership(
   record: MembershipRecord,
 ): CommunityMembership {

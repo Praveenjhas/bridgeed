@@ -57,6 +57,30 @@ export function readPagination(req: Request): PaginationQuery | null {
   return { page, limit };
 }
 
+/**
+ * Reads the feed `limit`: undefined when the client sent none, null when the
+ * value is not a positive integer. The controller turns null into the same 400
+ * the paged listings return for an invalid `page` or `limit`.
+ */
+export function readFeedLimit(req: Request): number | undefined | null {
+  return readPositiveInteger(req.query.limit);
+}
+
+/**
+ * Reads the feed `cursor`: undefined when absent, null when present but empty
+ * or repeated. The value itself is opaque, so it is only decoded by the feed
+ * service, which owns the 400 for a cursor this API did not issue.
+ */
+export function readFeedCursor(req: Request): string | undefined | null {
+  const value = req.query.cursor;
+
+  if (value === undefined) {
+    return undefined;
+  }
+
+  return isNonEmptyString(value) ? value.trim() : null;
+}
+
 function readPositiveInteger(value: unknown): number | undefined | null {
   if (value === undefined) {
     return undefined;
