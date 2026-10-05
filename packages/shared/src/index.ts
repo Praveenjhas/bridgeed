@@ -10,6 +10,10 @@ export type { User, StudentProfile } from "./types/user";
 
 export type { University } from "./types/university";
 
+export type { Skill } from "./types/skill";
+
+export type { Interest } from "./types/interest";
+
 export {
   COMMUNITY_MEMBER_ROLES,
   type CommunityMemberRole,
