@@ -9,7 +9,8 @@
     "build": "tsc",
     "start": "node dist/server.js",
     "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.scripts.json",
-    "smoke:community": "tsx scripts/community-smoke.ts"
+    "smoke:community": "tsx scripts/community-smoke.ts",
+    "smoke:post": "tsx scripts/post-smoke.ts"
   },
   "dependencies": {
     "@prisma/adapter-pg": "^7.10.0",

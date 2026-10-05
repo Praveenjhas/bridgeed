@@ -1,0 +1,49 @@
+import { Router } from "express";
+import { CommentController } from "../controllers/comment.controller";
+import { CommentService } from "../services/comment.service";
+import { PostService } from "../services/post.service";
+import { CommunityService } from "../services/community.service";
+import { CommunityMembershipService } from "../services/community-membership.service";
+import { CommentRepository } from "../repositories/comment.repository";
+import { PostRepository } from "../repositories/post.repository";
+import { CommunityRepository } from "../repositories/community.repository";
+import { CommunityMembershipRepository } from "../repositories/community-membership.repository";
+import { StudentProfileRepository } from "../repositories/student-profile.repository";
+
+const communityRepository = new CommunityRepository();
+const communityMembershipRepository = new CommunityMembershipRepository();
+const studentProfileRepository = new StudentProfileRepository();
+const postRepository = new PostRepository();
+const commentRepository = new CommentRepository();
+
+const communityService = new CommunityService(
+  communityRepository,
+  studentProfileRepository,
+);
+
+const communityMembershipService = new CommunityMembershipService(
+  communityMembershipRepository,
+  communityService,
+);
+
+const postService = new PostService(
+  postRepository,
+  communityService,
+  communityMembershipService,
+);
+
+const commentService = new CommentService(
+  commentRepository,
+  postService,
+  communityService,
+  communityMembershipService,
+);
+
+const commentController = new CommentController(commentService);
+
+/** Mounted at /api/v1/comments */
+export const commentRouter = Router();
+
+commentRouter.get("/:commentId", commentController.getCommentById);
+commentRouter.patch("/:commentId", commentController.updateComment);
+commentRouter.delete("/:commentId", commentController.deleteComment);

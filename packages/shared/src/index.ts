@@ -34,6 +34,31 @@ export {
 } from "./types/community-membership";
 
 export {
+  POST_TYPES,
+  type PostType,
+  type ContentAuthor,
+  type Post,
+  type PostWithAuthor,
+  type PostListItem,
+  type PostDetails,
+} from "./types/post";
+
+export {
+  type Comment,
+  type CommentWithAuthor,
+  type CommentListItem,
+  type CommentPostSummary,
+  type CommentDetails,
+} from "./types/comment";
+
+export {
+  REACTION_TYPES,
+  type ReactionType,
+  type PostReaction,
+  type CommentReaction,
+} from "./types/reaction";
+
+export {
   DEFAULT_PAGE,
   DEFAULT_PAGE_SIZE,
   MAX_PAGE_SIZE,

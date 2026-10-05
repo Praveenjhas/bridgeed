@@ -34,11 +34,15 @@ model StudentProfile {
   user            User              @relation(fields: [userId], references: [id], onDelete: Cascade)
   skills          StudentSkill[]
 
-  connectionsBlockedBy Connection[]           @relation("ConnectionBlocker")
-  connectionsReceived  Connection[]           @relation("ConnectionReceiver")
-  connectionsRequested Connection[]           @relation("ConnectionRequester")
-  communitiesCreated   Community[]            @relation("CommunityCreator")
-  communityMemberships CommunityMembership[]  @relation("CommunityMembershipUser")
+  connectionsBlockedBy Connection[]          @relation("ConnectionBlocker")
+  connectionsReceived  Connection[]          @relation("ConnectionReceiver")
+  connectionsRequested Connection[]          @relation("ConnectionRequester")
+  communitiesCreated   Community[]           @relation("CommunityCreator")
+  communityMemberships CommunityMembership[] @relation("CommunityMembershipUser")
+  comments             Comment[]             @relation("CommentAuthor")
+  commentReactions     CommentReaction[]     @relation("CommentReactionUser")
+  postReactions        PostReaction[]        @relation("PostReactionUser")
+  posts                Post[]                @relation("PostAuthor")
 }
 
 model University {
@@ -119,6 +123,7 @@ model Community {
 
   createdBy   StudentProfile        @relation("CommunityCreator", fields: [createdById], references: [userId], onDelete: Cascade)
   memberships CommunityMembership[]
+  posts       Post[]
 
   @@index([createdById])
   @@index([createdAt])
@@ -140,6 +145,77 @@ model CommunityMembership {
   @@unique([communityId, userId])
   @@index([communityId, status])
   @@index([userId, status])
+}
+
+model Post {
+  id          String    @id @default(uuid())
+  authorId    String
+  communityId String
+  content     String
+  type        PostType  @default(TEXT)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  deletedAt   DateTime?
+
+  author    StudentProfile @relation("PostAuthor", fields: [authorId], references: [userId], onDelete: Cascade)
+  community Community      @relation(fields: [communityId], references: [id], onDelete: Cascade)
+  comments  Comment[]
+  reactions PostReaction[]
+
+  @@index([authorId])
+  @@index([communityId, createdAt])
+  @@index([communityId, deletedAt])
+}
+
+model Comment {
+  id        String    @id @default(uuid())
+  postId    String
+  authorId  String
+  content   String
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  author    StudentProfile   @relation("CommentAuthor", fields: [authorId], references: [userId], onDelete: Cascade)
+  post      Post             @relation(fields: [postId], references: [id], onDelete: Cascade)
+  reactions CommentReaction[]
+
+  @@index([authorId])
+  @@index([postId, createdAt])
+  @@index([postId, deletedAt])
+}
+
+/// Reactions are modelled per target so PostgreSQL can enforce real foreign
+/// keys and uniqueness instead of relying on a polymorphic target column.
+/// The unique index already covers lookups by postId, so no extra index is
+/// needed for it.
+model PostReaction {
+  id        String       @id @default(uuid())
+  postId    String
+  userId    String
+  type      ReactionType @default(LIKE)
+  createdAt DateTime     @default(now())
+
+  post Post           @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user StudentProfile @relation("PostReactionUser", fields: [userId], references: [userId], onDelete: Cascade)
+
+  @@unique([postId, userId, type])
+  @@index([userId])
+}
+
+/// See PostReaction: the unique index already covers lookups by commentId.
+model CommentReaction {
+  id        String       @id @default(uuid())
+  commentId String
+  userId    String
+  type      ReactionType @default(LIKE)
+  createdAt DateTime     @default(now())
+
+  comment Comment        @relation(fields: [commentId], references: [id], onDelete: Cascade)
+  user    StudentProfile @relation("CommentReactionUser", fields: [userId], references: [userId], onDelete: Cascade)
+
+  @@unique([commentId, userId, type])
+  @@index([userId])
 }
 
 enum UserRole {
@@ -173,4 +249,12 @@ enum CommunityMembershipStatus {
   ACTIVE
   REJECTED
   BANNED
+}
+
+enum PostType {
+  TEXT
+}
+
+enum ReactionType {
+  LIKE
 }

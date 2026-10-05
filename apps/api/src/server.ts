@@ -17,6 +17,15 @@ import {
   studentCommunityRouter,
 } from "./routes/community.routes";
 import { communityMembershipRouter } from "./routes/community-membership.routes";
+import {
+  communityPostRouter,
+  postRouter,
+} from "./routes/post.routes";
+import { commentRouter } from "./routes/comment.routes";
+import {
+  commentReactionRouter,
+  postReactionRouter,
+} from "./routes/reaction.routes";
 dotenv.config();
 
 const app = express();
@@ -50,8 +59,16 @@ app.use(
 app.use("/api/v1/connections", connectionRouter);
 app.use("/api/v1/student-profiles/:userId", studentConnectionRouter);
 app.use("/api/v1/communities", communityRouter);
+app.use(
+  "/api/v1/communities/:communityId/posts",
+  communityPostRouter,
+);
 app.use("/api/v1/community-memberships", communityMembershipRouter);
 app.use("/api/v1/student-profiles/:userId", studentCommunityRouter);
+app.use("/api/v1/posts/:postId/reactions", postReactionRouter);
+app.use("/api/v1/posts", postRouter);
+app.use("/api/v1/comments/:commentId/reactions", commentReactionRouter);
+app.use("/api/v1/comments", commentRouter);
 app.listen(PORT, () => {
   console.log(`BridgeEd API running on http://localhost:${PORT}`);
 });

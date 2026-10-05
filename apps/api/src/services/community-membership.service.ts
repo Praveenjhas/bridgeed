@@ -262,6 +262,33 @@ export class CommunityMembershipService {
     );
   }
 
+  /**
+   * Authorization source for every content operation (posts, comments and
+   * reactions). The membership is always read from the database, so a client
+   * can never claim a role or a status it does not really have. Pending,
+   * rejected, banned and absent memberships are rejected with one single
+   * deterministic error.
+   */
+  async requireActiveMembership(
+    communityId: string,
+    userId: string,
+  ): Promise<CommunityMembership> {
+    const membership =
+      await this.communityMembershipRepository.findByCommunityAndUser(
+        communityId,
+        userId,
+      );
+
+    if (
+      !membership ||
+      membership.status !== COMMUNITY_MEMBERSHIP_STATUSES.ACTIVE
+    ) {
+      throw new Error(NOT_ACTIVE_MEMBER_MESSAGE);
+    }
+
+    return membership;
+  }
+
   private async requireMembership(
     membershipId: string,
   ): Promise<CommunityMembership> {
