@@ -2,7 +2,8 @@ import cors from "cors";
 import dotenv from "dotenv";
 import express from "express";
 import { userRouter } from "./routes/user.routes";
-
+import { studentProfileRouter } from "./routes/student-profile.routes";
+import { universityRouter } from "./routes/university.routes";
 dotenv.config();
 
 const app = express();
@@ -21,7 +22,8 @@ app.get("/api/v1/health", (_req, res) => {
 });
 
 app.use("/api/v1/users", userRouter);
-
+app.use("/api/v1/student-profiles", studentProfileRouter);
+app.use("/api/v1/universities", universityRouter);
 app.listen(PORT, () => {
   console.log(`BridgeEd API running on http://localhost:${PORT}`);
 });

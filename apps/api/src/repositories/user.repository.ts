@@ -1,4 +1,4 @@
-import type { User } from "@bridgeed/shared/src/types/user";
+import type { User } from "@bridgeed/shared";
 import { prisma } from "../config/prisma";
 
 export class UserRepository {
