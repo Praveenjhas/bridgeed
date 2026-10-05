@@ -33,6 +33,10 @@ model StudentProfile {
   university      University?       @relation(fields: [universityId], references: [id])
   user            User              @relation(fields: [userId], references: [id], onDelete: Cascade)
   skills          StudentSkill[]
+
+  connectionsBlockedBy Connection[] @relation("ConnectionBlocker")
+  connectionsReceived  Connection[] @relation("ConnectionReceiver")
+  connectionsRequested Connection[] @relation("ConnectionRequester")
 }
 
 model University {
@@ -82,9 +86,34 @@ model StudentInterest {
   @@id([studentId, interestId])
 }
 
+model Connection {
+  id          String           @id @default(uuid())
+  requesterId String
+  receiverId  String
+  status      ConnectionStatus @default(PENDING)
+  blockedById String?
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+
+  blockedBy StudentProfile? @relation("ConnectionBlocker", fields: [blockedById], references: [userId], onDelete: SetNull)
+  receiver  StudentProfile  @relation("ConnectionReceiver", fields: [receiverId], references: [userId], onDelete: Cascade)
+  requester StudentProfile  @relation("ConnectionRequester", fields: [requesterId], references: [userId], onDelete: Cascade)
+
+  @@unique([requesterId, receiverId])
+  @@index([requesterId, status])
+  @@index([receiverId, status])
+}
+
 enum UserRole {
   STUDENT
   MENTOR
   EDUCATOR
   ADMIN
+}
+
+enum ConnectionStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+  BLOCKED
 }

@@ -13,6 +13,7 @@ export interface Connection {
   requesterId: string;
   receiverId: string;
   status: ConnectionStatus;
+  blockedById: string | null;
   createdAt: string;
   updatedAt: string;
 }

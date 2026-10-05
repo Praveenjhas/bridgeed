@@ -8,6 +8,10 @@ import { skillRouter } from "./routes/skill.routes";
 import { interestRouter } from "./routes/interest.routes";
 import { studentSkillRouter } from "./routes/student-skill.routes";
 import { studentInterestRouter } from "./routes/student-interest.routes";
+import {
+  connectionRouter,
+  studentConnectionRouter,
+} from "./routes/connection.routes";
 dotenv.config();
 
 const app = express();
@@ -38,6 +42,8 @@ app.use(
   "/api/v1/student-profiles/:userId/interests",
   studentInterestRouter,
 );
+app.use("/api/v1/connections", connectionRouter);
+app.use("/api/v1/student-profiles/:userId", studentConnectionRouter);
 app.listen(PORT, () => {
   console.log(`BridgeEd API running on http://localhost:${PORT}`);
 });
