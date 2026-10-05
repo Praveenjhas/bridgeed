@@ -12,6 +12,11 @@ import {
   connectionRouter,
   studentConnectionRouter,
 } from "./routes/connection.routes";
+import {
+  communityRouter,
+  studentCommunityRouter,
+} from "./routes/community.routes";
+import { communityMembershipRouter } from "./routes/community-membership.routes";
 dotenv.config();
 
 const app = express();
@@ -44,6 +49,9 @@ app.use(
 );
 app.use("/api/v1/connections", connectionRouter);
 app.use("/api/v1/student-profiles/:userId", studentConnectionRouter);
+app.use("/api/v1/communities", communityRouter);
+app.use("/api/v1/community-memberships", communityMembershipRouter);
+app.use("/api/v1/student-profiles/:userId", studentCommunityRouter);
 app.listen(PORT, () => {
   console.log(`BridgeEd API running on http://localhost:${PORT}`);
 });

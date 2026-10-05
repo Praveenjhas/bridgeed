@@ -1,0 +1,79 @@
+import {
+  BANNED_FROM_COMMUNITY_MESSAGE,
+  ALREADY_ACTIVE_MEMBER_MESSAGE,
+  COMMUNITY_MEMBERSHIP_NOT_FOUND_MESSAGE,
+  JOIN_REQUEST_ALREADY_PENDING_MESSAGE,
+  MANAGE_MEMBERS_FORBIDDEN_MESSAGE,
+  NOT_ACTIVE_MEMBER_MESSAGE,
+  ONLY_PENDING_REQUEST_CAN_BE_APPROVED_MESSAGE,
+  ONLY_PENDING_REQUEST_CAN_BE_REJECTED_MESSAGE,
+  OWNER_CANNOT_LEAVE_MESSAGE,
+} from "../services/community-membership.service";
+import {
+  COMMUNITY_COVER_IMAGE_INVALID_MESSAGE,
+  COMMUNITY_COVER_IMAGE_TOO_LONG_MESSAGE,
+  COMMUNITY_CREATOR_REQUIRED_MESSAGE,
+  COMMUNITY_DESCRIPTION_INVALID_MESSAGE,
+  COMMUNITY_DESCRIPTION_TOO_LONG_MESSAGE,
+  COMMUNITY_NAME_REQUIRED_MESSAGE,
+  COMMUNITY_NAME_TOO_LONG_MESSAGE,
+  COMMUNITY_NOT_FOUND_MESSAGE,
+  COMMUNITY_SLUG_INVALID_MESSAGE,
+  COMMUNITY_SLUG_REQUIRED_MESSAGE,
+  COMMUNITY_SLUG_TOO_LONG_MESSAGE,
+  COMMUNITY_TYPE_INVALID_MESSAGE,
+  STUDENT_PROFILE_NOT_FOUND_MESSAGE,
+} from "../services/community.service";
+import { COMMUNITY_SLUG_TAKEN_MESSAGE } from "../repositories/community.repository";
+
+export interface MappedHttpError {
+  status: number;
+  error: string;
+}
+
+/**
+ * Maps the community domain errors raised by the service layer onto HTTP
+ * status codes. Returning null means the error is unexpected and should be
+ * reported as a server error instead of leaking database details.
+ */
+export function mapCommunityDomainError(
+  error: unknown,
+): MappedHttpError | null {
+  const message = error instanceof Error ? error.message : undefined;
+
+  switch (message) {
+    case COMMUNITY_NOT_FOUND_MESSAGE:
+    case STUDENT_PROFILE_NOT_FOUND_MESSAGE:
+    case COMMUNITY_MEMBERSHIP_NOT_FOUND_MESSAGE:
+      return { status: 404, error: message };
+
+    case MANAGE_MEMBERS_FORBIDDEN_MESSAGE:
+      return { status: 403, error: message };
+
+    case COMMUNITY_NAME_REQUIRED_MESSAGE:
+    case COMMUNITY_NAME_TOO_LONG_MESSAGE:
+    case COMMUNITY_SLUG_REQUIRED_MESSAGE:
+    case COMMUNITY_SLUG_TOO_LONG_MESSAGE:
+    case COMMUNITY_SLUG_INVALID_MESSAGE:
+    case COMMUNITY_TYPE_INVALID_MESSAGE:
+    case COMMUNITY_DESCRIPTION_INVALID_MESSAGE:
+    case COMMUNITY_DESCRIPTION_TOO_LONG_MESSAGE:
+    case COMMUNITY_COVER_IMAGE_INVALID_MESSAGE:
+    case COMMUNITY_COVER_IMAGE_TOO_LONG_MESSAGE:
+    case COMMUNITY_CREATOR_REQUIRED_MESSAGE:
+      return { status: 400, error: message };
+
+    case COMMUNITY_SLUG_TAKEN_MESSAGE:
+    case BANNED_FROM_COMMUNITY_MESSAGE:
+    case ALREADY_ACTIVE_MEMBER_MESSAGE:
+    case JOIN_REQUEST_ALREADY_PENDING_MESSAGE:
+    case OWNER_CANNOT_LEAVE_MESSAGE:
+    case NOT_ACTIVE_MEMBER_MESSAGE:
+    case ONLY_PENDING_REQUEST_CAN_BE_APPROVED_MESSAGE:
+    case ONLY_PENDING_REQUEST_CAN_BE_REJECTED_MESSAGE:
+      return { status: 409, error: message };
+
+    default:
+      return null;
+  }
+}

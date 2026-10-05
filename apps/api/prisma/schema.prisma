@@ -34,9 +34,11 @@ model StudentProfile {
   user            User              @relation(fields: [userId], references: [id], onDelete: Cascade)
   skills          StudentSkill[]
 
-  connectionsBlockedBy Connection[] @relation("ConnectionBlocker")
-  connectionsReceived  Connection[] @relation("ConnectionReceiver")
-  connectionsRequested Connection[] @relation("ConnectionRequester")
+  connectionsBlockedBy Connection[]           @relation("ConnectionBlocker")
+  connectionsReceived  Connection[]           @relation("ConnectionReceiver")
+  connectionsRequested Connection[]           @relation("ConnectionRequester")
+  communitiesCreated   Community[]            @relation("CommunityCreator")
+  communityMemberships CommunityMembership[]  @relation("CommunityMembershipUser")
 }
 
 model University {
@@ -104,6 +106,42 @@ model Connection {
   @@index([receiverId, status])
 }
 
+model Community {
+  id            String        @id @default(uuid())
+  name          String
+  slug          String        @unique
+  description   String?
+  type          CommunityType @default(PUBLIC)
+  createdById   String
+  coverImageUrl String?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  createdBy   StudentProfile        @relation("CommunityCreator", fields: [createdById], references: [userId], onDelete: Cascade)
+  memberships CommunityMembership[]
+
+  @@index([createdById])
+  @@index([createdAt])
+  @@index([type])
+}
+
+model CommunityMembership {
+  id          String                    @id @default(uuid())
+  communityId String
+  userId      String
+  role        CommunityMemberRole       @default(MEMBER)
+  status      CommunityMembershipStatus @default(PENDING)
+  createdAt   DateTime                  @default(now())
+  updatedAt   DateTime                  @updatedAt
+
+  community Community      @relation(fields: [communityId], references: [id], onDelete: Cascade)
+  user      StudentProfile @relation("CommunityMembershipUser", fields: [userId], references: [userId], onDelete: Cascade)
+
+  @@unique([communityId, userId])
+  @@index([communityId, status])
+  @@index([userId, status])
+}
+
 enum UserRole {
   STUDENT
   MENTOR
@@ -116,4 +154,23 @@ enum ConnectionStatus {
   ACCEPTED
   REJECTED
   BLOCKED
+}
+
+enum CommunityType {
+  PUBLIC
+  PRIVATE
+}
+
+enum CommunityMemberRole {
+  OWNER
+  ADMIN
+  MODERATOR
+  MEMBER
+}
+
+enum CommunityMembershipStatus {
+  PENDING
+  ACTIVE
+  REJECTED
+  BANNED
 }
