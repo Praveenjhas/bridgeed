@@ -1,6 +1,21 @@
 export { USER_ROLES, type UserRole } from "./constants/roles";
 
 export {
+  USER_STATUSES,
+  type UserStatus,
+} from "./constants/user-statuses";
+
+export {
+  type AuthenticatedUser,
+  type AuthSession,
+  type RegisterRequest,
+  type LoginRequest,
+  type RefreshRequest,
+  type LogoutResponse,
+  type CurrentUserResponse,
+} from "./types/auth";
+
+export {
   CONNECTION_STATUSES,
   type ConnectionStatus,
   type Connection,

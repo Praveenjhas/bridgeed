@@ -1,6 +1,7 @@
 import cors from "cors";
 import dotenv from "dotenv";
 import express from "express";
+import { authRouter } from "./routes/auth.routes";
 import { userRouter } from "./routes/user.routes";
 import { studentProfileRouter } from "./routes/student-profile.routes";
 import { universityRouter } from "./routes/university.routes";
@@ -44,6 +45,7 @@ app.get("/api/v1/health", (_req, res) => {
   });
 });
 
+app.use("/api/v1/auth", authRouter);
 app.use("/api/v1/users", userRouter);
 app.use("/api/v1/student-profiles", studentProfileRouter);
 app.use("/api/v1/universities", universityRouter);

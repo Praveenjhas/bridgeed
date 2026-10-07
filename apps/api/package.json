@@ -11,7 +11,8 @@
     "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.scripts.json",
     "smoke:community": "tsx scripts/community-smoke.ts",
     "smoke:post": "tsx scripts/post-smoke.ts",
-    "smoke:feed": "tsx scripts/feed-smoke.ts"
+    "smoke:feed": "tsx scripts/feed-smoke.ts",
+    "smoke:auth": "tsx scripts/auth-smoke.ts"
   },
   "dependencies": {
     "@prisma/adapter-pg": "^7.10.0",
@@ -19,6 +20,7 @@
     "cors": "^2.8.6",
     "dotenv": "^17.4.2",
     "express": "^5.2.1",
+    "express-rate-limit": "^8.7.1",
     "pg": "^8.23.1"
   },
   "devDependencies": {

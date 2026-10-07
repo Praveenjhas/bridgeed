@@ -1,4 +1,4 @@
-import { prisma } from "../config/prisma";
+import { prisma, TRANSACTION_OPTIONS, type DatabaseClient } from "../config/prisma";
 
 /**
  * A refresh-token session. Access tokens are stateless and short lived, so they
@@ -101,11 +101,18 @@ export class SessionRepository {
   /**
    * Inserts an active session. `createdAt` and `updatedAt` are written
    * explicitly because the columns carry no database default.
+   *
+   * `client` defaults to the pooled client; a caller that has to write a user
+   * and its first session together passes the transaction handle instead, so
+   * both rows land or neither does.
    */
-  async createSession(input: CreateSessionInput): Promise<Session> {
+  async createSession(
+    input: CreateSessionInput,
+    client: DatabaseClient = prisma,
+  ): Promise<Session> {
     const now = new Date();
 
-    const record = await prisma.session.create({
+    const record = await client.session.create({
       data: {
         id: input.id,
         userId: input.userId,
@@ -121,6 +128,21 @@ export class SessionRepository {
     });
 
     return toSession(record);
+  }
+
+  /**
+   * Loads a session by id, active or not. The authentication guard needs to see
+   * a revoked row rather than nothing at all, so it can tell a session that was
+   * signed out from one that never existed.
+   */
+  async findById(sessionId: string): Promise<Session | null> {
+    const record = await prisma.session.findUnique({
+      where: {
+        id: sessionId,
+      },
+    });
+
+    return record ? toSession(record) : null;
   }
 
   /**
@@ -278,6 +300,6 @@ export class SessionRepository {
       });
 
       return toSession(record);
-    });
+    }, TRANSACTION_OPTIONS);
   }
 }
