@@ -1,9 +1,10 @@
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { DEFAULT_PAGE, type Community } from "@bridgeed/shared";
 import { usePaginatedList } from "@/hooks/usePaginatedList";
 import type { LoadStatus } from "@/hooks/useAsyncValue";
 import { COMMUNITIES_PAGE_LIMIT } from "../constants";
 import { fetchCommunities } from "../api/communities.api";
+import { subscribeToCommunitiesRefresh } from "../communities-refresh";
 
 export interface CommunitiesState {
   communities: Community[];
@@ -58,6 +59,12 @@ export function useCommunities(actorId: string | null): CommunitiesState {
     loadPage,
     enabled: actorId !== null,
   });
+
+  const { refresh } = list;
+
+  // A community created elsewhere (the create screen) announces itself here, so
+  // the directory picks it up without reloading on every focus.
+  useEffect(() => subscribeToCommunitiesRefresh(refresh), [refresh]);
 
   return {
     communities: list.items,

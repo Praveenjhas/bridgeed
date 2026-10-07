@@ -153,6 +153,10 @@ function RootNavigator() {
           name="create-post"
           options={{ ...detailScreenOptions, title: "Create post" }}
         />
+        <Stack.Screen
+          name="create-community"
+          options={{ ...detailScreenOptions, title: "New study group" }}
+        />
       </Stack.Protected>
 
       {/*

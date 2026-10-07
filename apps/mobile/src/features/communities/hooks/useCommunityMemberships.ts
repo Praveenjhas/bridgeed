@@ -1,7 +1,8 @@
-import { useCallback } from "react";
+import { useCallback, useEffect } from "react";
 import type { CommunityMembershipWithCommunity } from "@bridgeed/shared";
 import { useAsyncValue, type LoadStatus } from "@/hooks/useAsyncValue";
 import { fetchStudentMemberships } from "../api/memberships.api";
+import { subscribeToCommunitiesRefresh } from "../communities-refresh";
 
 export interface CommunityMembershipsState {
   memberships: CommunityMembershipWithCommunity[];
@@ -41,6 +42,10 @@ export function useCommunityMemberships(
     load,
     Boolean(actorId),
   );
+
+  // Creating a community grants the creator an owner membership, so the roster of
+  // "My communities" reloads whenever a community is created elsewhere.
+  useEffect(() => subscribeToCommunitiesRefresh(refresh), [refresh]);
 
   const memberships = data ?? [];
 

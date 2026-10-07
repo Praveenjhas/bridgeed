@@ -29,3 +29,22 @@ export const MEMBERS_PREVIEW_AVATARS = 8;
  * before a round trip; the API stays the authority and its error is shown as is.
  */
 export const MAX_POST_CONTENT_LENGTH = 5000;
+
+/**
+ * Longest community name the API accepts (`COMMUNITY_NAME_TOO_LONG_MESSAGE`).
+ *
+ * The three limits below mirror `apps/api/src/services/community.service.ts`.
+ * They are duplicated only so the create form can count and disable its button
+ * before a round trip; the API stays the authority and its message is shown as is.
+ */
+export const MAX_COMMUNITY_NAME_LENGTH = 120;
+
+/**
+ * Longest *normalized* community slug the API accepts
+ * (`COMMUNITY_SLUG_TOO_LONG_MESSAGE`). The form slugifies as the handle is typed,
+ * so the value it counts is already the normalized one.
+ */
+export const MAX_COMMUNITY_SLUG_LENGTH = 80;
+
+/** Longest community description the API accepts. */
+export const MAX_COMMUNITY_DESCRIPTION_LENGTH = 2000;

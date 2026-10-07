@@ -26,6 +26,20 @@ export const COMMUNITY_TYPE_TONES: Record<CommunityType, BadgeTone> = {
   [COMMUNITY_TYPES.PRIVATE]: "neutral",
 };
 
+/**
+ * One sentence explaining what choosing a type means for a creator.
+ *
+ * The create form shows these beside each option so a student picks with the
+ * consequence in view: a public group is joinable at once, a private one puts an
+ * owner or an admin in front of every request.
+ */
+export const COMMUNITY_TYPE_DESCRIPTIONS: Record<CommunityType, string> = {
+  [COMMUNITY_TYPES.PUBLIC]:
+    "Anyone can find it in the directory and join straight away.",
+  [COMMUNITY_TYPES.PRIVATE]:
+    "It shows up in the directory, but an owner or an admin approves each request to join.",
+};
+
 export const MEMBERSHIP_STATUS_LABELS: Record<
   CommunityMembershipStatus,
   string

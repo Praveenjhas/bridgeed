@@ -1,6 +1,9 @@
 export {
   COMMUNITIES_PAGE_LIMIT,
   COMMUNITY_POSTS_PAGE_LIMIT,
+  MAX_COMMUNITY_DESCRIPTION_LENGTH,
+  MAX_COMMUNITY_NAME_LENGTH,
+  MAX_COMMUNITY_SLUG_LENGTH,
   MAX_POST_CONTENT_LENGTH,
   MEMBERS_PAGE_LIMIT,
   MEMBERS_PREVIEW_AVATARS,
@@ -8,6 +11,7 @@ export {
 } from "./constants";
 
 export {
+  COMMUNITY_TYPE_DESCRIPTIONS,
   COMMUNITY_TYPE_LABELS,
   COMMUNITY_TYPE_TONES,
   MEMBERSHIP_STATUS_LABELS,
@@ -25,9 +29,15 @@ export {
 export {
   fetchCommunities,
   fetchCommunity,
+  createCommunity,
+  type CreateCommunityParams,
   type FetchCommunitiesParams,
   type FetchCommunityParams,
 } from "./api/communities.api";
+export {
+  subscribeToCommunitiesRefresh,
+  notifyCommunitiesRefresh,
+} from "./communities-refresh";
 export {
   approveMembership,
   fetchCommunityMembers,
@@ -51,6 +61,11 @@ export {
 
 export { useCommunities, type CommunitiesState } from "./hooks/useCommunities";
 export { useCommunity, type CommunityState } from "./hooks/useCommunity";
+export {
+  useCreateCommunity,
+  slugifyCommunityName,
+  type CreateCommunityState,
+} from "./hooks/useCreateCommunity";
 export {
   useCommunityMembers,
   type CommunityMembersState,
@@ -86,6 +101,10 @@ export {
   CommunityPostComposer,
   type CommunityPostComposerProps,
 } from "./components/CommunityPostComposer";
+export {
+  CommunityTypePicker,
+  type CommunityTypePickerProps,
+} from "./components/CommunityTypePicker";
 export {
   JoinRequestsCard,
   type JoinRequestsCardProps,

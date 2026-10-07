@@ -13,6 +13,7 @@ import {
 } from "@bridgeed/shared";
 import {
   AppText,
+  Button,
   EmptyState,
   ErrorState,
   Icon,
@@ -168,6 +169,10 @@ export default function CommunitiesScreen() {
     });
   }, []);
 
+  const openCreateCommunity = useCallback(() => {
+    router.push("/create-community");
+  }, []);
+
   const refreshAll = useCallback(() => {
     refreshMemberships();
     refreshDirectory();
@@ -190,12 +195,20 @@ export default function CommunitiesScreen() {
       subtitle="Communities you belong to, and ones you can join"
       showWordmark
       actions={
-        <IconButton
-          icon="refresh"
-          accessibilityLabel="Refresh communities"
-          onPress={refreshAll}
-          disabled={memberships.isRefreshing || directory.isRefreshing}
-        />
+        <>
+          <IconButton
+            icon="add"
+            accessibilityLabel="Create a study group"
+            onPress={openCreateCommunity}
+            disabled={!isConfigured}
+          />
+          <IconButton
+            icon="refresh"
+            accessibilityLabel="Refresh communities"
+            onPress={refreshAll}
+            disabled={memberships.isRefreshing || directory.isRefreshing}
+          />
+        </>
       }
     />
   );
@@ -247,6 +260,13 @@ export default function CommunitiesScreen() {
           icon="people-outline"
           title="No communities yet"
           message="Communities created on this campus show up here, with their type and where you stand with them."
+          action={
+            <Button
+              label="Create a study group"
+              icon="add"
+              onPress={openCreateCommunity}
+            />
+          }
         />
       );
     }

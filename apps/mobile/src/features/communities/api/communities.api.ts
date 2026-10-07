@@ -2,6 +2,7 @@ import {
   DEFAULT_PAGE,
   DEFAULT_PAGE_SIZE,
   type Community,
+  type CommunityType,
   type Paginated,
 } from "@bridgeed/shared";
 import { apiClient } from "@/services/api";
@@ -50,4 +51,35 @@ export async function fetchCommunity({
     `/communities/${encodeURIComponent(communityId)}`,
     { signal },
   );
+}
+
+export interface CreateCommunityParams {
+  name: string;
+  slug: string;
+  type: CommunityType;
+  /** Omitted or empty when the creator wrote none. */
+  description?: string;
+  signal?: AbortSignal;
+}
+
+/**
+ * Creates a community and makes the creator its owner.
+ *
+ * The owner is the signed-in account, taken by the API from the bearer token, so
+ * no `createdById` is sent: a client cannot create a community owned by somebody
+ * else. Only the visible fields are sent; the API normalizes the name and slug,
+ * enforces the length limits and answers 409 when the slug is already taken,
+ * which this function surfaces unchanged.
+ */
+export async function createCommunity({
+  name,
+  slug,
+  type,
+  description,
+  signal,
+}: CreateCommunityParams): Promise<Community> {
+  return apiClient.post<Community>("/communities", {
+    body: { name, slug, type, description },
+    signal,
+  });
 }
