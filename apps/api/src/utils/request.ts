@@ -1,4 +1,5 @@
 import type { Request } from "express";
+import { SEARCH_TYPE_VALUES, type SearchType } from "@bridgeed/shared";
 
 export interface PaginationQuery {
   page?: number;
@@ -64,6 +65,21 @@ export function readCurrentActorId(req: Request): string | null {
   return req.auth?.userId ?? readActorId(req);
 }
 
+/**
+ * Reads a `search` query value: undefined when absent, null when present but not
+ * a single string, and otherwise the trimmed term. An empty term is kept as `""`
+ * and simply means "no search", which is cheaper than treating it as an error.
+ */
+export function readSearchQuery(req: Request): string | undefined | null {
+  const { search } = req.query;
+
+  if (search === undefined) {
+    return undefined;
+  }
+
+  return typeof search === "string" ? search.trim() : null;
+}
+
 export function readPagination(req: Request): PaginationQuery | null {
   const page = readPositiveInteger(req.query.page);
   const limit = readPositiveInteger(req.query.limit);
@@ -73,6 +89,44 @@ export function readPagination(req: Request): PaginationQuery | null {
   }
 
   return { page, limit };
+}
+
+/**
+ * Reads the `q` of a search request: undefined when absent, null when present but
+ * not a single string (a repeated `?q=a&q=b` arrives as an array), and otherwise
+ * the trimmed term. A term that was only whitespace is kept as `""`, because
+ * "you sent nothing" is a different answer from "you sent no request at all" and
+ * only the controller can say which response that deserves.
+ */
+export function readSearchTerm(req: Request): string | undefined | null {
+  const { q } = req.query;
+
+  if (q === undefined) {
+    return undefined;
+  }
+
+  return typeof q === "string" ? q.trim() : null;
+}
+
+/**
+ * Reads the optional `type` of a search request: undefined when absent, null when
+ * present but not one of `SEARCH_TYPE_VALUES` (which includes a repeated value,
+ * an empty value and an unknown one), and otherwise the narrowed type.
+ */
+export function readSearchType(req: Request): SearchType | undefined | null {
+  const { type } = req.query;
+
+  if (type === undefined) {
+    return undefined;
+  }
+
+  if (typeof type !== "string") {
+    return null;
+  }
+
+  const candidate = type.trim();
+
+  return SEARCH_TYPE_VALUES.find((value) => value === candidate) ?? null;
 }
 
 /**

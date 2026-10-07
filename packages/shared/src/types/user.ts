@@ -1,3 +1,4 @@
+import type { Program } from "./academic";
 import type { UserRole } from "../constants/roles";
 import type { Interest } from "./interest";
 import type { Skill } from "./skill";
@@ -17,6 +18,8 @@ export interface StudentProfile {
   username: string;
   bio: string | null;
   universityId: string | null;
+  /** The programme the student is enrolled in, or null when none is chosen. */
+  programId: string | null;
   degree: string | null;
   branch: string | null;
   graduationYear: number | null;
@@ -36,6 +39,7 @@ export interface StudentProfile {
  */
 export interface StudentProfileDetails extends StudentProfile {
   university: University | null;
+  program: Program | null;
   skills: Skill[];
   interests: Interest[];
 }

@@ -44,6 +44,17 @@ export interface CreateCommunityState {
   setDescription: (value: string) => void;
   type: CommunityType;
   setType: (value: CommunityType) => void;
+  /**
+   * The optional academic context. Choosing a university clears the programme and
+   * the subject, and choosing a programme clears the subject, so the three can
+   * never describe a course the chosen university does not offer.
+   */
+  universityId: string | null;
+  setUniversityId: (value: string | null) => void;
+  programId: string | null;
+  setProgramId: (value: string | null) => void;
+  subjectId: string | null;
+  setSubjectId: (value: string | null) => void;
   /** True while the create request is in flight. */
   isSubmitting: boolean;
   /** Result of the last failed submit, or null. */
@@ -81,6 +92,9 @@ export function useCreateCommunity(): CreateCommunityState {
   const [editedSlug, setEditedSlug] = useState<string | null>(null);
   const [description, setDescription] = useState("");
   const [type, setType] = useState<CommunityType>(COMMUNITY_TYPES.PUBLIC);
+  const [universityId, setUniversityIdState] = useState<string | null>(null);
+  const [programId, setProgramIdState] = useState<string | null>(null);
+  const [subjectId, setSubjectIdState] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitErrorMessage, setSubmitErrorMessage] = useState<string | null>(
     null,
@@ -92,6 +106,17 @@ export function useCreateCommunity(): CreateCommunityState {
 
   const editSlug = useCallback((value: string) => {
     setEditedSlug(slugifyCommunityName(value));
+  }, []);
+
+  const setUniversityId = useCallback((value: string | null) => {
+    setUniversityIdState(value);
+    setProgramIdState(null);
+    setSubjectIdState(null);
+  }, []);
+
+  const setProgramId = useCallback((value: string | null) => {
+    setProgramIdState(value);
+    setSubjectIdState(null);
   }, []);
 
   const trimmedName = name.trim();
@@ -159,6 +184,9 @@ export function useCreateCommunity(): CreateCommunityState {
         type,
         description:
           trimmedDescription.length > 0 ? trimmedDescription : undefined,
+        universityId: universityId ?? undefined,
+        programId: programId ?? undefined,
+        subjectId: subjectId ?? undefined,
       });
       notifyCommunitiesRefresh();
       return community;
@@ -171,11 +199,14 @@ export function useCreateCommunity(): CreateCommunityState {
   }, [
     isDescriptionOverLimit,
     nameError,
+    programId,
     slugError,
+    subjectId,
     trimmedDescription,
     trimmedName,
     trimmedSlug,
     type,
+    universityId,
   ]);
 
   return {
@@ -187,6 +218,12 @@ export function useCreateCommunity(): CreateCommunityState {
     setDescription,
     type,
     setType,
+    universityId,
+    setUniversityId,
+    programId,
+    setProgramId,
+    subjectId,
+    setSubjectId: setSubjectIdState,
     isSubmitting,
     submitErrorMessage,
     dismissSubmitError,

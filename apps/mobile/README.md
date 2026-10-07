@@ -2,10 +2,10 @@
 
 Expo (React Native) client for BridgeEd. This package currently contains the app
 foundation: the navigation shell, the design system, the API layer, real mobile
-**Authentication** built on a persisted session, and four features — the ranked
+**Authentication** built on a persisted session, four features — the ranked
 **Feed** with post detail, comments and likes, **Communities** with membership,
 rosters and community posts, and **Connections** with requests, blocks and
-student profiles.
+student profiles — and **Global search** over the academic graph.
 
 ## Stack
 
@@ -15,7 +15,7 @@ student profiles.
 | Navigation   | Expo Router 57, file based routes under `src/app`                                           |
 | Language     | TypeScript (strict), path alias `@/*` → `src/*`                                             |
 | Icons        | `@expo/vector-icons` (Ionicons), wrapped by `components/Icon`                               |
-| Shared types | `@bridgeed/shared` (auth, feed, post, comment, reaction, community, connection, pagination) |
+| Shared types | `@bridgeed/shared` (auth, feed, post, comment, reaction, community, connection, academic, search, pagination) |
 | Formatting   | Prettier defaults (no config in this repo)                                                  |
 
 ## Getting started
@@ -86,7 +86,12 @@ src
 │  │     ├─ index.tsx       # community detail: header, members, posts
 │  │     └─ members.tsx     # member list + join requests
 │  ├─ post/[postId].tsx     # post detail: post, comments, composer
-│  └─ student/[studentId].tsx  # student profile + connection actions
+│  ├─ student/[studentId].tsx  # student profile + connection actions
+│  ├─ search.tsx            # global search over the academic graph
+│  ├─ universities.tsx      # university directory: search + paging
+│  ├─ universities/
+│  │  └─ [universityId].tsx # university detail: programmes + communities
+│  └─ programs/[programId].tsx # programme detail: university + subjects
 ├─ components/              # design system primitives, no feature knowledge
 ├─ config/                  # environment resolution (API base URL)
 ├─ features/                # feature-first code: api, hooks, components
@@ -96,7 +101,9 @@ src
 │  ├─ feed/                 # feed api, useFeed, PostCard, summary, footer
 │  ├─ post/                 # post + comment api, hooks, CommentRow, composer
 │  ├─ reactions/            # like/unlike post
-│  └─ students/             # student profile, university, skills and interests
+│  ├─ search/               # search api, useSearch, category rows and labels
+│  ├─ students/             # student profile, university, skills and interests
+│  └─ universities/         # university, programme and subject api + hooks
 ├─ hooks/                   # generic data hooks
 ├─ providers/               # app wide providers (safe area, session)
 ├─ services/api/            # transport: fetch wrapper, base URL, errors
@@ -155,6 +162,8 @@ community id) travel in the request.
   repeated cursors.
 - `hooks/useAsyncValue` — a single resource with the same loading, error and
   refresh semantics.
+- `hooks/useDebouncedValue` — holds a value still for a moment, so typing a word
+  into a search field is one request rather than one per letter.
 - `features/feed/hooks/useFeed` — composes `usePaginatedList` with optimistic
   likes (patched immediately, rolled back on failure) and exposes the ranking
   metadata of the last page.
@@ -172,6 +181,11 @@ community id) travel in the request.
   the reader stands with one student, the single source of relationship truth)
   and `useConnectionActions` (connect, accept, reject, withdraw, remove and
   block, with progress tracked per target).
+- `features/search/hooks/useSearch` — the grouped answer rather than a flat list:
+  the five categories, the count behind each of them and the page inside the one
+  being read. A new term (or category) restarts it and clears what is on screen,
+  so rows can never sit under a term they did not match; a term shorter than two
+  characters is never sent at all.
 - `features/students/hooks` — `useStudentProfile`, `useStudentProfiles` (one
   batch read for the people in a connection list), `useUniversity` (cached,
   because one university is shared by many students), `useStudentSkills` and
@@ -190,7 +204,10 @@ future dark mode or high contrast theme changes one file.
 Components in `components/` cover the state space a screen needs: `Screen`,
 `PageHeader`, `SectionHeading`, `Card`, `Divider`, `AppText`, `Button`, `Badge`,
 `Icon`, `IconButton`, `Avatar`, `InlineError`, `LoadingState`, `SkeletonList`,
-`EmptyState`, `ErrorState` and `FeaturePlaceholder`.
+`EmptyState`, `ErrorState` and `FeaturePlaceholder`. Lists reuse one row per kind
+of thing — `UniversityRow`, `ProgramRow`, `SubjectRow`, `CommunityRow`,
+`StudentRow` — and every search field in the app is the same `SearchField`, so a
+directory and the search screen look and behave alike.
 
 ### Navigation
 
@@ -207,10 +224,44 @@ Components in `components/` cover the state space a screen needs: `Screen`,
   platform back gesture and button come for free.
 - `student/[studentId]` — a student profile, pushed from a connection card, a
   request or any other list, and the place the connection actions live.
+- `universities` — the academic directory, pushed from the Home entry card: a
+  searchable, paged list of universities with their programme, student and
+  community counts, and a search action in its header for when what you wanted is
+  not an institution.
+- `universities/[universityId]` — one university with its programmes and the
+  communities anchored to it.
+- `programs/[programId]` — one programme with its university, the subjects it
+  teaches, and the students and communities on it.
+- `search` — global search, pushed from Home and from the university directory.
 
 Every pushed screen keeps the native stack header (options are shared in
 `app/_layout.tsx`); tab screens draw their own `PageHeader` so they can carry a
 subtitle and trailing actions.
+
+### Global search
+
+One field, one endpoint: `GET /api/v1/search`. Without a `type` the API searches
+universities, programmes, subjects, communities and students with the same term
+and returns the first five of each with the total behind them, which is what the
+screen shows while a student types: a section per category that matched, each
+labelled with how many matches it holds, and a "See all" that reopens the same
+screen as that category's paged listing. Categories with nothing in them are left
+out rather than drawn empty.
+
+The field is debounced by 300 ms, so a typed word is one request instead of one
+per letter, and a term shorter than two characters is not sent at all — the screen
+offers the five categories to narrow the search instead. Before a term exists the
+categories are a picker, which is what makes "search only communities" a choice
+rather than a filter applied after the fact. Results are rows from the shared
+design system, so a university in search looks exactly like a university in the
+directory. A subject has no screen of its own in v1, so its rows are not
+pressable; every other row opens what it names.
+
+The search is case insensitive and matches on the text a reader would type:
+names first, then a city for an institution, a degree or field for a programme, a
+description for a community, a handle, university or programme for a student. It
+is not typo tolerant and does not fold accents — typing "enginering" finds
+nothing — and this is a documented v1 boundary rather than an unfinished feature.
 
 ## What works today
 
@@ -227,6 +278,11 @@ subtitle and trailing actions.
 | Connection requests  | Incoming pending requests from `GET /api/v1/student-profiles/:userId/connections/requests/received`, answered with `PATCH /api/v1/connections/:connectionId/accept` and `/reject`, with progress per row                                      |
 | Student profile      | `GET /api/v1/student-profiles/:userId` with the university, skills and interests, plus a connection call to action derived from the API's own connection row                                                                                  |
 | Relationship actions | `POST /api/v1/connections`, `DELETE /api/v1/connections/:connectionId/request`, `DELETE /api/v1/connections/:connectionId` and `POST /api/v1/connections/:connectionId/block`, each behind a confirmation where it ends something             |
+| Academic discovery   | The university directory from `GET /api/v1/universities` (paged, name search, one counts line per row) and the subject catalog from `GET /api/v1/subjects`, reached from the Home entry card                                                  |
+| University detail    | `GET /api/v1/universities/:universityId` (and the same document by `/slug/:slug`): its programmes, the communities anchored to it and the programme/student/community counts                                                                  |
+| Programme detail     | `GET /api/v1/programs/:programId` with its university, the subjects it teaches and the student and community counts, plus `GET /api/v1/universities/:universityId/programs` for the list                                                      |
+| Academic context     | A student profile records the programme it is enrolled in, and a community may carry an optional university, programme and/or subject, shown resolved to names on the community screen                                                        |
+| Global search        | `GET /api/v1/search` from the Home card and the university directory's header: one term across universities, programmes, subjects, communities and students, grouped with per category counts, a "See all" that pages inside one category, and the searcher's own profile left out of the student results |
 | Profile              | Placeholder: the account and configuration it reports are real, the editable profile is not                                                                                                                                                   |
 
 Deliberately not built yet: unblocking a student (the API exposes no unblock
@@ -237,6 +293,12 @@ comment, so a toggle would be guessing. Community post cards show the like count
 as a number for the same reason: the community listing does not report the
 reader's reaction, and only the feed does. Blocking is offered only where a
 connection row already exists, because that row is what the block acts on.
+
+Search v1 stops where the data does. It matches text rather than meaning: no
+typos, no stemming ("teaching" does not find "teacher") and no accent folding. A
+subject has no detail screen, so a subject result cannot be opened, and there is
+no question, resource, research or event category because those tables do not
+exist yet — an empty section would be a promise the product cannot keep.
 
 ## Checks
 

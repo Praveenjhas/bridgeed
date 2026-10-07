@@ -10,6 +10,8 @@
     "start": "node dist/server.js",
     "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.scripts.json",
     "smoke:community": "tsx scripts/community-smoke.ts",
+    "smoke:academic": "tsx scripts/academic-smoke.ts",
+    "smoke:search": "tsx scripts/search-smoke.ts",
     "smoke:post": "tsx scripts/post-smoke.ts",
     "smoke:feed": "tsx scripts/feed-smoke.ts",
     "smoke:auth": "tsx scripts/auth-smoke.ts",

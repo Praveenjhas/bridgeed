@@ -29,6 +29,31 @@ export type {
 
 export type { University } from "./types/university";
 
+export {
+  SEARCH_TYPES,
+  SEARCH_TYPE_VALUES,
+  SEARCH_DEFAULT_CATEGORY_LIMIT,
+  type SearchType,
+  type UniversitySearchResult,
+  type ProgramSearchResult,
+  type SubjectSearchResult,
+  type CommunitySearchResult,
+  type StudentSearchResult,
+  type SearchResult,
+  type SearchResultGroups,
+  type SearchResultCounts,
+  type SearchPagination,
+  type SearchResponse,
+} from "./types/search";
+
+export type {
+  Subject,
+  Program,
+  ProgramDetail,
+  UniversitySummary,
+  UniversityDetail,
+} from "./types/academic";
+
 export type { Skill } from "./types/skill";
 
 export type { Interest } from "./types/interest";
@@ -40,6 +65,8 @@ export {
   type CommunityType,
   type CommunityMemberRole,
   type Community,
+  type CommunityAcademicContext,
+  type CommunityDetail,
 } from "./types/community";
 
 export {

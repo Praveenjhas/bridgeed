@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { StudentProfileController } from "../controllers/student-profile.controller";
 import { StudentProfileService } from "../services/student-profile.service";
+import { ProgramRepository } from "../repositories/program.repository";
 import { StudentProfileRepository } from "../repositories/student-profile.repository";
 import { UniversityRepository } from "../repositories/university.repository";
 import { StudentSkillRepository } from "../repositories/student-skill.repository";
@@ -13,6 +14,7 @@ import { requireAuth } from "../middleware/require-auth";
 
 const studentProfileRepository = new StudentProfileRepository();
 const universityRepository = new UniversityRepository();
+const programRepository = new ProgramRepository();
 const studentSkillRepository = new StudentSkillRepository();
 const studentInterestRepository = new StudentInterestRepository();
 const skillRepository = new SkillRepository();
@@ -32,6 +34,7 @@ const studentInterestService = new StudentInterestService(
 const studentProfileService = new StudentProfileService(
   studentProfileRepository,
   universityRepository,
+  programRepository,
   studentSkillService,
   studentInterestService,
 );

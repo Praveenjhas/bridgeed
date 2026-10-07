@@ -88,6 +88,9 @@ const communityColumns = {
   type: true,
   createdById: true,
   coverImageUrl: true,
+  universityId: true,
+  programId: true,
+  subjectId: true,
   createdAt: true,
   updatedAt: true,
 } as const;

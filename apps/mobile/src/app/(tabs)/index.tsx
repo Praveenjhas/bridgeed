@@ -11,6 +11,7 @@ import {
   Divider,
   EmptyState,
   ErrorState,
+  Icon,
   IconButton,
   InlineError,
   Screen,
@@ -52,7 +53,7 @@ function greetingFor(date: Date): string {
  * behaviour is testable and reusable outside a rendered screen.
  */
 export default function FeedScreen() {
-  const { colors, layout, spacing } = useTheme();
+  const { colors, layout, radius, spacing } = useTheme();
   const insets = useSafeAreaInsets();
   const { actorId, isConfigured, detail: actorDetail } = useActor();
   const { profile } = useStudentProfileStatus();
@@ -72,6 +73,14 @@ export default function FeedScreen() {
 
   const openProfile = useCallback(() => {
     router.push("/(tabs)/profile");
+  }, []);
+
+  const openUniversities = useCallback(() => {
+    router.push("/universities");
+  }, []);
+
+  const openSearch = useCallback(() => {
+    router.push("/search");
   }, []);
 
   const renderItem = useCallback(
@@ -208,6 +217,88 @@ export default function FeedScreen() {
         }
         ListHeaderComponent={
           <View style={{ gap: spacing.lg }}>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Search BridgeEd"
+              accessibilityHint="Opens global search over universities, programs, subjects, communities and students"
+              onPress={openSearch}
+              style={({ pressed }) => [
+                styles.universityEntry,
+                {
+                  backgroundColor: colors.surface,
+                  borderColor: colors.border,
+                  borderRadius: radius.md,
+                  padding: spacing.md,
+                  gap: spacing.md,
+                  opacity: pressed ? 0.6 : 1,
+                },
+              ]}
+            >
+              <View
+                style={[
+                  styles.universityMark,
+                  {
+                    backgroundColor: colors.accentSoft,
+                    borderRadius: radius.sm,
+                  },
+                ]}
+              >
+                <Icon
+                  name="search-outline"
+                  size={layout.icon.md}
+                  tone="accent"
+                />
+              </View>
+              <View style={styles.universityText}>
+                <AppText variant="bodyStrong">Search</AppText>
+                <AppText variant="caption" tone="muted">
+                  Find universities, programs, subjects, communities and people.
+                </AppText>
+              </View>
+              <Icon name="chevron-forward" size={16} tone="textDisabled" />
+            </Pressable>
+
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Browse universities"
+              accessibilityHint="Opens the university directory"
+              onPress={openUniversities}
+              style={({ pressed }) => [
+                styles.universityEntry,
+                {
+                  backgroundColor: colors.surface,
+                  borderColor: colors.border,
+                  borderRadius: radius.md,
+                  padding: spacing.md,
+                  gap: spacing.md,
+                  opacity: pressed ? 0.6 : 1,
+                },
+              ]}
+            >
+              <View
+                style={[
+                  styles.universityMark,
+                  {
+                    backgroundColor: colors.accentSoft,
+                    borderRadius: radius.sm,
+                  },
+                ]}
+              >
+                <Icon
+                  name="school-outline"
+                  size={layout.icon.md}
+                  tone="accent"
+                />
+              </View>
+              <View style={styles.universityText}>
+                <AppText variant="bodyStrong">Universities</AppText>
+                <AppText variant="caption" tone="muted">
+                  Browse programs, subjects and communities by institution.
+                </AppText>
+              </View>
+              <Icon name="chevron-forward" size={16} tone="textDisabled" />
+            </Pressable>
+
             <FeedComposePrompt onPress={openCreatePost} />
             {feed.pageMeta ? <FeedSummary meta={feed.pageMeta} /> : null}
             {feed.actionErrorMessage ? (
@@ -253,5 +344,19 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
+  },
+  universityEntry: {
+    flexDirection: "row",
+    alignItems: "center",
+    borderWidth: StyleSheet.hairlineWidth,
+  },
+  universityMark: {
+    width: 40,
+    height: 40,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  universityText: {
+    flex: 1,
   },
 });

@@ -171,6 +171,31 @@ function RootNavigator() {
           name="create-community"
           options={{ ...detailScreenOptions, title: "Create a community" }}
         />
+        {/*
+          The university directory is a pushed area rather than a fifth tab, so
+          the bottom navigation stays at four. It is reached from Home.
+        */}
+        <Stack.Screen
+          name="universities"
+          options={{ ...detailScreenOptions, title: "Universities" }}
+        />
+        <Stack.Screen
+          name="universities/[universityId]"
+          options={{ ...detailScreenOptions, title: "University" }}
+        />
+        <Stack.Screen
+          name="programs/[programId]"
+          options={{ ...detailScreenOptions, title: "Program" }}
+        />
+        {/*
+          Global search is a pushed area reached from Home and from the university
+          directory, so it keeps the native header and its back button: the field is
+          the first thing under the header rather than a second title.
+        */}
+        <Stack.Screen
+          name="search"
+          options={{ ...detailScreenOptions, title: "Search" }}
+        />
       </Stack.Protected>
 
       {/*

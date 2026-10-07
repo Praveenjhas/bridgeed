@@ -302,6 +302,17 @@ export default function CommunityDetailScreen() {
     );
   })();
 
+  // "IIT Mandi · B.Tech Mechanical Engineering · Thermodynamics", dropping the
+  // parts this community does not name. Empty when it has no academic context,
+  // which is the case for every community created before the academic graph.
+  const academicContextLine = [
+    detail.academicContext.university?.name ?? null,
+    detail.academicContext.program?.name ?? null,
+    detail.academicContext.subject?.name ?? null,
+  ]
+    .filter((part): part is string => part !== null)
+    .join(" · ");
+
   const communityHeader = (
     <View style={{ gap: spacing.lg }}>
       {/* The community's identity, laid out flat like a masthead rather than a
@@ -322,6 +333,17 @@ export default function CommunityDetailScreen() {
 
         {detail.description ? (
           <AppText tone="secondary">{detail.description}</AppText>
+        ) : null}
+
+        {academicContextLine.length > 0 ? (
+          <View style={{ gap: spacing.xxs }}>
+            <AppText variant="label" tone="accent">
+              Academic context
+            </AppText>
+            <AppText variant="caption" tone="secondary">
+              {academicContextLine}
+            </AppText>
+          </View>
         ) : null}
 
         <Divider spacing="sm" />

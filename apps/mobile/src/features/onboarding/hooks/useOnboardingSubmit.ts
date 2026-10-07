@@ -210,5 +210,11 @@ async function readProfileDetails(
     // Fall through to the minimal document below.
   }
 
-  return { ...created, university: null, skills: [], interests: [] };
+  return {
+    ...created,
+    university: null,
+    program: null,
+    skills: [],
+    interests: [],
+  };
 }

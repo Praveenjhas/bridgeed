@@ -1,0 +1,6 @@
+
+> @bridgeed/api@0.1.0 dev
+> tsx watch src/server.ts
+
+◇ injected env (0) from .env // tip: ⌘ enable debugging { debug: true }
+BridgeEd API running on http://localhost:4000

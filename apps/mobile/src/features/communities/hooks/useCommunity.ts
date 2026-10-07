@@ -1,10 +1,10 @@
 import { useCallback } from "react";
-import type { Community } from "@bridgeed/shared";
+import type { CommunityDetail } from "@bridgeed/shared";
 import { useAsyncValue, type LoadStatus } from "@/hooks/useAsyncValue";
 import { fetchCommunity } from "../api/communities.api";
 
 export interface CommunityState {
-  community: Community | null;
+  community: CommunityDetail | null;
   status: LoadStatus;
   errorMessage: string | null;
   isRefreshing: boolean;

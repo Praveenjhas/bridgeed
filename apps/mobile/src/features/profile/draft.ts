@@ -27,6 +27,8 @@ export interface ProfileDraft {
   graduationYear: string;
   location: string;
   universityId: string | null;
+  /** The programme chosen, or null. Only meaningful with a university. */
+  programId: string | null;
   skillIds: string[];
   interestIds: string[];
 }
@@ -62,6 +64,7 @@ export function draftFromProfile(profile: StudentProfileDetails): ProfileDraft {
       profile.graduationYear === null ? "" : String(profile.graduationYear),
     location: profile.location ?? "",
     universityId: profile.universityId,
+    programId: profile.programId,
     skillIds: profile.skills.map((skill) => skill.id),
     interestIds: profile.interests.map((interest) => interest.id),
   };
@@ -136,6 +139,7 @@ export function toProfileUpdateInput(
     name: draft.name.trim(),
     bio: optionalText(draft.bio),
     universityId: draft.universityId,
+    programId: draft.programId,
     degree: optionalText(draft.degree),
     branch: optionalText(draft.branch),
     graduationYear: readGraduationYear(draft.graduationYear),

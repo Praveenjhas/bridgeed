@@ -1,5 +1,7 @@
 import type {
   Community,
+  CommunityAcademicContext,
+  CommunityDetail,
   CommunityType,
   PageWindow,
 } from "@bridgeed/shared";
@@ -33,8 +35,18 @@ interface CommunityRecord {
   type: CommunityTypeRecord;
   createdById: string;
   coverImageUrl: string | null;
+  universityId: string | null;
+  programId: string | null;
+  subjectId: string | null;
   createdAt: Date;
   updatedAt: Date;
+}
+
+/** The academic context a community detail row includes, resolved to names. */
+export interface CommunityAcademicRelations {
+  university: { id: string; name: string; slug: string } | null;
+  program: { id: string; name: string } | null;
+  subject: { id: string; name: string } | null;
 }
 
 export interface CreateCommunityInput {
@@ -45,6 +57,9 @@ export interface CreateCommunityInput {
   type: CommunityType;
   createdById: string;
   coverImageUrl: string | null;
+  universityId: string | null;
+  programId: string | null;
+  subjectId: string | null;
 }
 
 export interface CreateOwnerMembershipInput {
@@ -62,10 +77,60 @@ export function toCommunity(record: CommunityRecord): Community {
     type: typeByDatabaseType[record.type],
     createdById: record.createdById,
     coverImageUrl: record.coverImageUrl,
+    universityId: record.universityId,
+    programId: record.programId,
+    subjectId: record.subjectId,
     createdAt: record.createdAt.toISOString(),
     updatedAt: record.updatedAt.toISOString(),
   };
 }
+
+/**
+ * Maps the academic relations a detail query includes onto the shared context,
+ * so a screen can render the university, programme and subject names directly.
+ *
+ * It is exported because search resolves the same three relations for a
+ * community result, and one mapping keeps the two identical.
+ */
+export function toAcademicContext(
+  record: CommunityAcademicRelations,
+): CommunityAcademicContext {
+  return {
+    university: record.university
+      ? {
+          id: record.university.id,
+          name: record.university.name,
+          slug: record.university.slug,
+        }
+      : null,
+    program: record.program
+      ? { id: record.program.id, name: record.program.name }
+      : null,
+    subject: record.subject
+      ? { id: record.subject.id, name: record.subject.name }
+      : null,
+  };
+}
+
+/** A community plus its resolved academic context. */
+export function toCommunityDetail(
+  record: CommunityRecord & CommunityAcademicRelations,
+): CommunityDetail {
+  return {
+    ...toCommunity(record),
+    academicContext: toAcademicContext(record),
+  };
+}
+
+/**
+ * The three academic relations a detail read includes. They are named relations,
+ * so Prisma loads them in the same query as the community.
+ */
+const ACADEMIC_INCLUDE = {
+  university: { select: { id: true, name: true, slug: true } },
+  program: { select: { id: true, name: true } },
+  subject: { select: { id: true, name: true } },
+} as const;
 
 function isUniqueConstraintError(error: unknown): boolean {
   return (
@@ -75,14 +140,15 @@ function isUniqueConstraintError(error: unknown): boolean {
 }
 
 export class CommunityRepository {
-  async findById(id: string): Promise<Community | null> {
+  async findById(id: string): Promise<CommunityDetail | null> {
     const record = await prisma.community.findUnique({
       where: {
         id,
       },
+      include: ACADEMIC_INCLUDE,
     });
 
-    return record ? toCommunity(record) : null;
+    return record ? toCommunityDetail(record) : null;
   }
 
   async existsBySlug(slug: string): Promise<boolean> {
@@ -117,6 +183,9 @@ export class CommunityRepository {
             type: databaseTypeByType[community.type],
             createdById: community.createdById,
             coverImageUrl: community.coverImageUrl,
+            universityId: community.universityId,
+            programId: community.programId,
+            subjectId: community.subjectId,
           },
         });
 

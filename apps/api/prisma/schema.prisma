@@ -65,6 +65,10 @@ model StudentProfile {
   username        String            @unique
   bio             String?
   universityId    String?
+  /// The programme the student is enrolled in. Optional: every profile that
+  /// existed before the academic graph is still valid, and a student who has not
+  /// picked one keeps working exactly as before.
+  programId       String?
   degree          String?
   branch          String?
   graduationYear  Int?
@@ -73,6 +77,7 @@ model StudentProfile {
   createdAt       DateTime          @default(now())
   updatedAt       DateTime          @updatedAt
   interests       StudentInterest[]
+  program         Program?          @relation(fields: [programId], references: [id], onDelete: SetNull)
   university      University?       @relation(fields: [universityId], references: [id])
   user            User              @relation(fields: [userId], references: [id], onDelete: Cascade)
   skills          StudentSkill[]
@@ -88,24 +93,92 @@ model StudentProfile {
   posts                Post[]                @relation("PostAuthor")
 
   @@index([universityId])
+  @@index([programId])
 }
 
 model University {
-  id         String           @id @default(uuid())
-  name       String
+  id          String           @id @default(uuid())
+  name        String
   /// Stable URL-safe identifier derived from `name` when the row is created.
-  slug       String           @unique
-  country    String
-  state      String?
-  city       String?
-  websiteUrl String?
-  verified   Boolean          @default(false)
+  slug        String           @unique
+  country     String
+  state       String?
+  city        String?
+  websiteUrl  String?
+  /// A short editorial summary shown on the directory and profile screens.
+  description String?
+  /// Optional logo or profile image, stored the same way a profile picture is:
+  /// as a URL, so the app can render it without an upload pipeline of its own.
+  logoUrl     String?
+  verified    Boolean          @default(false)
   /// Timestamp of the moment `verified` became true, so a future review trail
   /// does not have to guess from `updatedAt`. Null while unverified.
-  verifiedAt DateTime?
-  createdAt  DateTime         @default(now())
-  updatedAt  DateTime         @updatedAt
-  students   StudentProfile[]
+  verifiedAt  DateTime?
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+  students    StudentProfile[]
+  programs    Program[]
+  communities Community[]
+}
+
+/// A degree programme offered by a university, for example "B.Tech Mechanical
+/// Engineering". It is the middle of the academic graph — a university has many
+/// programmes, a programme maps to subjects, and a student or community can
+/// optionally point at one.
+model Program {
+  id           String   @id @default(uuid())
+  universityId String
+  name         String
+  /// The qualification, for example "B.Tech". Null when the programme is not
+  /// described by a single degree.
+  degree       String?
+  /// The broad field, for example "Engineering". Null when it is unknown.
+  field        String?
+  description  String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  university  University       @relation(fields: [universityId], references: [id], onDelete: Cascade)
+  subjects    ProgramSubject[]
+  students    StudentProfile[]
+  communities Community[]
+
+  /// A university does not offer the same programme name twice.
+  @@unique([universityId, name])
+  @@index([universityId])
+  @@index([name])
+}
+
+/// A subject taught inside one or more programmes, for example "Thermodynamics".
+/// Subjects are shared across programmes, so the link between the two is a
+/// many-to-many join table rather than a column on either side.
+model Subject {
+  id        String   @id @default(uuid())
+  name      String
+  slug      String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  programs    ProgramSubject[]
+  communities Community[]
+
+  @@index([name])
+}
+
+/// The many-to-many link between a programme and the subjects it teaches. An
+/// explicit join model (rather than an implicit relation) follows the same shape
+/// as `StudentSkill` and `StudentInterest`, so every join in the schema looks
+/// alike.
+model ProgramSubject {
+  programId String
+  subjectId String
+  createdAt DateTime @default(now())
+
+  program Program @relation(fields: [programId], references: [id], onDelete: Cascade)
+  subject Subject @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+
+  @@id([programId, subjectId])
+  @@index([subjectId])
 }
 
 model Skill {
@@ -168,16 +241,29 @@ model Community {
   type          CommunityType @default(PUBLIC)
   createdById   String
   coverImageUrl String?
+  /// Optional academic context. Every community that existed before the academic
+  /// graph leaves all three null and keeps working exactly as it did; a new one
+  /// may anchor itself to a university, a programme and/or a subject. The
+  /// `SetNull` behaviour means deleting academic data never deletes a community.
+  universityId  String?
+  programId     String?
+  subjectId     String?
   createdAt     DateTime      @default(now())
   updatedAt     DateTime      @updatedAt
 
   createdBy   StudentProfile        @relation("CommunityCreator", fields: [createdById], references: [userId], onDelete: Cascade)
+  university  University?           @relation(fields: [universityId], references: [id], onDelete: SetNull)
+  program     Program?              @relation(fields: [programId], references: [id], onDelete: SetNull)
+  subject     Subject?              @relation(fields: [subjectId], references: [id], onDelete: SetNull)
   memberships CommunityMembership[]
   posts       Post[]
 
   @@index([createdById])
   @@index([createdAt])
   @@index([type])
+  @@index([universityId])
+  @@index([programId])
+  @@index([subjectId])
 }
 
 model CommunityMembership {

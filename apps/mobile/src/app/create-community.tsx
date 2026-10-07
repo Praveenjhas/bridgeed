@@ -22,6 +22,13 @@ import {
   MAX_COMMUNITY_SLUG_LENGTH,
   useCreateCommunity,
 } from "@/features/communities";
+import { OptionList } from "@/features/onboarding";
+import { useUniversities } from "@/features/students";
+import {
+  formatProgramAcademic,
+  useProgramDetail,
+  useUniversityPrograms,
+} from "@/features/universities";
 import { useActor } from "@/providers/AuthProvider";
 import { useTheme } from "@/theme";
 
@@ -41,6 +48,10 @@ export default function CreateCommunityScreen() {
   const { isConfigured, detail } = useActor();
   const { spacing } = useTheme();
   const form = useCreateCommunity();
+  const universities = useUniversities();
+  const programs = useUniversityPrograms(form.universityId);
+  const programDetail = useProgramDetail(form.programId);
+  const subjects = programDetail.data?.subjects ?? [];
 
   const handleSubmit = async () => {
     const created = await form.submit();
@@ -122,6 +133,83 @@ export default function CreateCommunityScreen() {
                 onChange={form.setType}
                 disabled={form.isSubmitting}
               />
+            </View>
+
+            {/*
+              The academic context is optional and nested: a programme belongs to
+              a university and a subject to a programme, so each field only opens
+              once the one above it is chosen. A community with none of this is
+              exactly as valid as before.
+            */}
+            <View style={{ gap: spacing.md }}>
+              <SectionHeading
+                title="Academic context"
+                hint="Optional — tie this community to a university, a program or a subject."
+              />
+              <OptionList
+                options={universities.items}
+                keyOf={(university) => university.id}
+                labelOf={(university) => university.name}
+                secondaryLabelOf={(university) =>
+                  [university.city, university.country]
+                    .filter((part): part is string => part !== null)
+                    .join(", ") || null
+                }
+                searchTextOf={(university) =>
+                  [university.name, university.city ?? "", university.country]
+                    .filter((part) => part.length > 0)
+                    .join(" ")
+                }
+                selectedKey={form.universityId}
+                onSelect={(university) => form.setUniversityId(university.id)}
+                onClear={() => form.setUniversityId(null)}
+                isLoading={universities.status === "loading"}
+                errorMessage={universities.errorMessage}
+                onRetry={universities.refresh}
+                emptyMessage="No universities are listed yet."
+                searchPlaceholder="Search universities"
+                clearLabel="Clear university"
+              />
+
+              {form.universityId !== null ? (
+                <OptionList
+                  options={programs.data ?? []}
+                  keyOf={(program) => program.id}
+                  labelOf={(program) => program.name}
+                  secondaryLabelOf={(program) => formatProgramAcademic(program)}
+                  searchTextOf={(program) =>
+                    [program.name, program.degree ?? "", program.field ?? ""]
+                      .filter((part) => part.length > 0)
+                      .join(" ")
+                  }
+                  selectedKey={form.programId}
+                  onSelect={(program) => form.setProgramId(program.id)}
+                  onClear={() => form.setProgramId(null)}
+                  isLoading={programs.status === "loading"}
+                  errorMessage={programs.errorMessage}
+                  onRetry={programs.refresh}
+                  emptyMessage="No programs are listed for this university yet."
+                  searchPlaceholder="Search programs"
+                  clearLabel="Clear program"
+                />
+              ) : null}
+
+              {form.programId !== null ? (
+                <OptionList
+                  options={subjects}
+                  keyOf={(subject) => subject.id}
+                  labelOf={(subject) => subject.name}
+                  selectedKey={form.subjectId}
+                  onSelect={(subject) => form.setSubjectId(subject.id)}
+                  onClear={() => form.setSubjectId(null)}
+                  isLoading={programDetail.status === "loading"}
+                  errorMessage={programDetail.errorMessage}
+                  onRetry={programDetail.refresh}
+                  emptyMessage="No subjects are listed for this program yet."
+                  searchPlaceholder="Search subjects"
+                  clearLabel="Clear subject"
+                />
+              ) : null}
             </View>
 
             <View style={{ gap: spacing.md }}>

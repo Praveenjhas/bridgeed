@@ -1,6 +1,7 @@
 import {
   COMMUNITY_TYPES,
   type Community,
+  type CommunityDetail,
   type CommunityType,
   type Paginated,
 } from "@bridgeed/shared";
@@ -8,7 +9,10 @@ import {
   COMMUNITY_SLUG_TAKEN_MESSAGE,
   CommunityRepository,
 } from "../repositories/community.repository";
+import { ProgramRepository } from "../repositories/program.repository";
 import { StudentProfileRepository } from "../repositories/student-profile.repository";
+import { SubjectRepository } from "../repositories/subject.repository";
+import { UniversityRepository } from "../repositories/university.repository";
 import {
   normalizeLimit,
   normalizePage,
@@ -38,6 +42,18 @@ export const COMMUNITY_COVER_IMAGE_INVALID_MESSAGE =
 export const COMMUNITY_COVER_IMAGE_TOO_LONG_MESSAGE =
   "Community cover image URL must be at most 2048 characters";
 
+/** Raised when the optional academic context a community names does not exist. */
+export const COMMUNITY_UNKNOWN_UNIVERSITY_MESSAGE =
+  "The selected university does not exist";
+export const COMMUNITY_UNKNOWN_PROGRAM_MESSAGE =
+  "The selected program does not exist";
+export const COMMUNITY_UNKNOWN_SUBJECT_MESSAGE =
+  "The selected subject does not exist";
+export const COMMUNITY_PROGRAM_UNIVERSITY_MISMATCH_MESSAGE =
+  "The selected program is not offered by the selected university";
+export const COMMUNITY_ACADEMIC_CONTEXT_INVALID_MESSAGE =
+  "Academic context must be a string id or null";
+
 const MAX_NAME_LENGTH = 120;
 const MAX_SLUG_LENGTH = 80;
 const MAX_RAW_SLUG_LENGTH = 120;
@@ -57,6 +73,10 @@ export interface CreateCommunityInput {
   type: unknown;
   createdById: unknown;
   coverImageUrl?: unknown;
+  /** Optional academic context; each is an id, or null/absent for none. */
+  universityId?: unknown;
+  programId?: unknown;
+  subjectId?: unknown;
 }
 
 export interface ListCommunitiesQuery {
@@ -68,6 +88,16 @@ export class CommunityService {
   constructor(
     private readonly communityRepository: CommunityRepository,
     private readonly studentProfileRepository: StudentProfileRepository,
+    /**
+     * The academic-context repositories are only touched when a community is
+     * created with a university, programme or subject. They default to their own
+     * instances so the routers that only read communities — content, reactions,
+     * the feed — can keep constructing the service with the two dependencies they
+     * already have, without wiring repositories they never reach.
+     */
+    private readonly universityRepository: UniversityRepository = new UniversityRepository(),
+    private readonly programRepository: ProgramRepository = new ProgramRepository(),
+    private readonly subjectRepository: SubjectRepository = new SubjectRepository(),
   ) {}
 
   async createCommunity(input: CreateCommunityInput): Promise<Community> {
@@ -77,8 +107,12 @@ export class CommunityService {
     const description = this.normalizeDescription(input.description);
     const coverImageUrl = this.normalizeCoverImageUrl(input.coverImageUrl);
     const createdById = this.normalizeCreatorId(input.createdById);
+    const universityId = this.normalizeOptionalId(input.universityId);
+    const programId = this.normalizeOptionalId(input.programId);
+    const subjectId = this.normalizeOptionalId(input.subjectId);
 
     await this.ensureStudentProfileExists(createdById);
+    await this.validateAcademicContext({ universityId, programId, subjectId });
 
     if (await this.communityRepository.existsBySlug(slug)) {
       throw new Error(COMMUNITY_SLUG_TAKEN_MESSAGE);
@@ -95,6 +129,9 @@ export class CommunityService {
         type,
         createdById,
         coverImageUrl,
+        universityId,
+        programId,
+        subjectId,
       },
       {
         id: crypto.randomUUID(),
@@ -104,7 +141,7 @@ export class CommunityService {
     );
   }
 
-  async getCommunityById(communityId: string): Promise<Community> {
+  async getCommunityById(communityId: string): Promise<CommunityDetail> {
     return this.requireCommunity(communityId);
   }
 
@@ -126,7 +163,7 @@ export class CommunityService {
    * Shared community lookup so membership logic relies on one single
    * "Community not found" rule.
    */
-  async requireCommunity(communityId: string): Promise<Community> {
+  async requireCommunity(communityId: string): Promise<CommunityDetail> {
     const community = await this.communityRepository.findById(communityId);
 
     if (!community) {
@@ -260,5 +297,69 @@ export class CommunityService {
     }
 
     return value.trim();
+  }
+
+  /**
+   * Reads one optional academic id. Absent, null and blank all mean "not set";
+   * anything that is not a string is rejected rather than silently dropped.
+   */
+  private normalizeOptionalId(value: unknown): string | null {
+    if (value === undefined || value === null) {
+      return null;
+    }
+
+    if (typeof value !== "string") {
+      throw new Error(COMMUNITY_ACADEMIC_CONTEXT_INVALID_MESSAGE);
+    }
+
+    const trimmed = value.trim();
+
+    return trimmed.length > 0 ? trimmed : null;
+  }
+
+  /**
+   * Checks the optional academic context a community names.
+   *
+   * Every id that is set has to exist, and a programme has to belong to the
+   * university it is paired with, so a community can never point at a course a
+   * university does not offer. Each check is skipped when the id is absent, which
+   * is what keeps a community with no academic context exactly as it was.
+   */
+  private async validateAcademicContext({
+    universityId,
+    programId,
+    subjectId,
+  }: {
+    universityId: string | null;
+    programId: string | null;
+    subjectId: string | null;
+  }): Promise<void> {
+    if (universityId) {
+      const university = await this.universityRepository.findById(universityId);
+
+      if (!university) {
+        throw new Error(COMMUNITY_UNKNOWN_UNIVERSITY_MESSAGE);
+      }
+    }
+
+    if (programId) {
+      const program = await this.programRepository.findById(programId);
+
+      if (!program) {
+        throw new Error(COMMUNITY_UNKNOWN_PROGRAM_MESSAGE);
+      }
+
+      if (universityId && program.universityId !== universityId) {
+        throw new Error(COMMUNITY_PROGRAM_UNIVERSITY_MISMATCH_MESSAGE);
+      }
+    }
+
+    if (subjectId) {
+      const subject = await this.subjectRepository.findById(subjectId);
+
+      if (!subject) {
+        throw new Error(COMMUNITY_UNKNOWN_SUBJECT_MESSAGE);
+      }
+    }
   }
 }

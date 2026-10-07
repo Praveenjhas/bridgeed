@@ -28,6 +28,10 @@ import {
 } from "@/features/onboarding";
 import { useEditProfileForm } from "@/features/profile";
 import { useInterests, useSkills, useUniversities } from "@/features/students";
+import {
+  formatProgramAcademic,
+  useUniversityPrograms,
+} from "@/features/universities";
 import { useStudentProfileStatus } from "@/providers/StudentProfileProvider";
 import { useTheme } from "@/theme";
 
@@ -91,6 +95,7 @@ function EditProfileForm({ profile }: EditProfileFormProps) {
   const { layout, spacing } = useTheme();
   const form = useEditProfileForm(profile);
   const universities = useUniversities();
+  const programs = useUniversityPrograms(form.draft.universityId);
   const skills = useSkills();
   const interests = useInterests();
 
@@ -174,9 +179,14 @@ function EditProfileForm({ profile }: EditProfileFormProps) {
                   }
                   selectedKey={form.draft.universityId}
                   onSelect={(university) =>
-                    form.edit({ universityId: university.id })
+                    // Choosing a university resets the programme, because a
+                    // programme from the previous university would no longer
+                    // belong to the new one.
+                    form.edit({ universityId: university.id, programId: null })
                   }
-                  onClear={() => form.edit({ universityId: null })}
+                  onClear={() =>
+                    form.edit({ universityId: null, programId: null })
+                  }
                   isLoading={universities.status === "loading"}
                   errorMessage={universities.errorMessage}
                   onRetry={universities.refresh}
@@ -184,6 +194,32 @@ function EditProfileForm({ profile }: EditProfileFormProps) {
                   searchPlaceholder="Search universities"
                   clearLabel="Clear university"
                 />
+                {form.draft.universityId !== null ? (
+                  <OptionList
+                    options={programs.data ?? []}
+                    keyOf={(program) => program.id}
+                    labelOf={(program) => program.name}
+                    secondaryLabelOf={(program) =>
+                      formatProgramAcademic(program)
+                    }
+                    searchTextOf={(program) =>
+                      [program.name, program.degree ?? "", program.field ?? ""]
+                        .filter((part) => part.length > 0)
+                        .join(" ")
+                    }
+                    selectedKey={form.draft.programId}
+                    onSelect={(program) =>
+                      form.edit({ programId: program.id })
+                    }
+                    onClear={() => form.edit({ programId: null })}
+                    isLoading={programs.status === "loading"}
+                    errorMessage={programs.errorMessage}
+                    onRetry={programs.refresh}
+                    emptyMessage="No programs are listed for this university yet."
+                    searchPlaceholder="Search programs"
+                    clearLabel="Clear program"
+                  />
+                ) : null}
                 <TextField
                   label="Course"
                   icon="school-outline"

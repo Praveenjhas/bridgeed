@@ -9,6 +9,7 @@ import {
   type University,
 } from "@bridgeed/shared";
 import { apiClient, ApiError } from "@/services/api";
+import { UNIVERSITY_PICKER_LIMIT } from "../constants";
 
 export interface FetchStudentProfileParams {
   /** The student whose profile is read. This is the profile's `userId`. */
@@ -153,6 +154,7 @@ export interface CreateMyStudentProfileInput {
   username: string;
   bio?: string | null;
   universityId?: string | null;
+  programId?: string | null;
   degree?: string | null;
   branch?: string | null;
   graduationYear?: number | null;
@@ -186,11 +188,22 @@ export interface FetchCatalogParams {
   signal?: AbortSignal;
 }
 
-/** Every university the API knows about, for the pickers that name one. */
+/**
+ * Every university the API knows about, for the pickers that name one.
+ *
+ * The directory endpoint is paged, so this reads the first (large) page and
+ * unwraps its items. `UniversitySummary` extends `University`, so the picker
+ * still receives everything it renders.
+ */
 export async function fetchUniversities({
   signal,
 }: FetchCatalogParams = {}): Promise<University[]> {
-  return apiClient.get<University[]>("/universities", { signal });
+  const page = await apiClient.get<Paginated<University>>("/universities", {
+    query: { limit: UNIVERSITY_PICKER_LIMIT },
+    signal,
+  });
+
+  return page.items;
 }
 
 /** Every skill a profile can carry. */
@@ -254,6 +267,7 @@ export interface UpdateMyStudentProfileInput {
   name?: string;
   bio?: string | null;
   universityId?: string | null;
+  programId?: string | null;
   degree?: string | null;
   branch?: string | null;
   graduationYear?: number | null;

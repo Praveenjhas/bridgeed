@@ -36,6 +36,9 @@ export class CommunityController {
         type?: unknown;
         createdById?: unknown;
         coverImageUrl?: unknown;
+        universityId?: unknown;
+        programId?: unknown;
+        subjectId?: unknown;
       };
 
       // The owner is the authenticated account; the body's `createdById` is read
@@ -61,6 +64,9 @@ export class CommunityController {
         type: body.type,
         createdById,
         coverImageUrl: body.coverImageUrl,
+        universityId: body.universityId,
+        programId: body.programId,
+        subjectId: body.subjectId,
       });
 
       res.status(201).json(community);

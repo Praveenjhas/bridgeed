@@ -2,6 +2,7 @@ import {
   DEFAULT_PAGE,
   DEFAULT_PAGE_SIZE,
   type Community,
+  type CommunityDetail,
   type CommunityType,
   type Paginated,
 } from "@bridgeed/shared";
@@ -41,13 +42,15 @@ export interface FetchCommunityParams {
  * Reads one community.
  *
  * This endpoint is public, so it answers without an actor: whether its posts are
- * readable is decided separately by the membership of the requesting student.
+ * readable is decided separately by the membership of the requesting student. The
+ * response also carries the community's academic context, resolved to names, so
+ * the screen can show it without a read per entity.
  */
 export async function fetchCommunity({
   communityId,
   signal,
-}: FetchCommunityParams): Promise<Community> {
-  return apiClient.get<Community>(
+}: FetchCommunityParams): Promise<CommunityDetail> {
+  return apiClient.get<CommunityDetail>(
     `/communities/${encodeURIComponent(communityId)}`,
     { signal },
   );
@@ -59,6 +62,10 @@ export interface CreateCommunityParams {
   type: CommunityType;
   /** Omitted or empty when the creator wrote none. */
   description?: string;
+  /** Optional academic context; each is omitted when none is chosen. */
+  universityId?: string;
+  programId?: string;
+  subjectId?: string;
   signal?: AbortSignal;
 }
 
@@ -76,10 +83,21 @@ export async function createCommunity({
   slug,
   type,
   description,
+  universityId,
+  programId,
+  subjectId,
   signal,
 }: CreateCommunityParams): Promise<Community> {
   return apiClient.post<Community>("/communities", {
-    body: { name, slug, type, description },
+    body: {
+      name,
+      slug,
+      type,
+      description,
+      universityId,
+      programId,
+      subjectId,
+    },
     signal,
   });
 }

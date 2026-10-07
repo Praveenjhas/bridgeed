@@ -4,6 +4,7 @@ import type {
   StudentProfileDetails,
 } from "@bridgeed/shared/src/types/user";
 import type { University } from "@bridgeed/shared/src/types/university";
+import { ProgramRepository } from "../repositories/program.repository";
 import { StudentProfileRepository } from "../repositories/student-profile.repository";
 import { UniversityRepository } from "../repositories/university.repository";
 import {
@@ -21,6 +22,7 @@ export interface CreateStudentProfileInput {
   username: string;
   bio?: string | null;
   universityId?: string | null;
+  programId?: string | null;
   degree?: string | null;
   branch?: string | null;
   graduationYear?: number | null;
@@ -40,6 +42,7 @@ export interface UpdateStudentProfileInput {
   name?: string;
   bio?: string | null;
   universityId?: string | null;
+  programId?: string | null;
   degree?: string | null;
   branch?: string | null;
   graduationYear?: number | null;
@@ -56,10 +59,19 @@ export interface ListStudentProfilesQuery {
 export const STUDENT_PROFILE_UNKNOWN_UNIVERSITY_MESSAGE =
   "The selected university does not exist";
 
+/** Raised when an update names a programme that does not exist. */
+export const STUDENT_PROFILE_UNKNOWN_PROGRAM_MESSAGE =
+  "The selected program does not exist";
+
+/** Raised when a programme is chosen that the named university does not offer. */
+export const STUDENT_PROFILE_PROGRAM_UNIVERSITY_MISMATCH_MESSAGE =
+  "The selected program is not offered by the selected university";
+
 export class StudentProfileService {
   constructor(
     private readonly studentProfileRepository: StudentProfileRepository,
     private readonly universityRepository: UniversityRepository,
+    private readonly programRepository: ProgramRepository,
     private readonly studentSkillService: StudentSkillService,
     private readonly studentInterestService: StudentInterestService,
   ) {}
@@ -83,12 +95,23 @@ export class StudentProfileService {
       throw new Error("This username is already taken");
     }
 
+    // The academic context is checked before the row is written, so a profile can
+    // never be created pointing at a university or programme that does not exist,
+    // and never at a programme its university does not offer. Onboarding sends the
+    // pair the picker produced, so an id that has since been deleted is answered
+    // with a reason instead of a foreign key failure.
+    await this.validateAcademicAffiliation(
+      input.universityId ?? null,
+      input.programId ?? null,
+    );
+
     const profile: StudentProfile = {
       userId: input.userId,
       name: input.name,
       username: input.username,
       bio: input.bio ?? null,
       universityId: input.universityId ?? null,
+      programId: input.programId ?? null,
       degree: input.degree ?? null,
       branch: input.branch ?? null,
       graduationYear: input.graduationYear ?? null,
@@ -157,19 +180,57 @@ export class StudentProfileService {
       return null;
     }
 
-    if (updates.universityId !== undefined && updates.universityId !== null) {
-      const university = await this.universityRepository.findById(
-        updates.universityId,
-      );
+    // The pair is checked against what the profile will be left with, so an update
+    // that sends only a programme cannot leave the university pointing somewhere
+    // else: a programme that is named has to belong to the university the profile
+    // records, whether that university arrived in this request or is the one
+    // already stored.
+    await this.validateAcademicAffiliation(
+      updates.universityId !== undefined
+        ? updates.universityId
+        : existingProfile.universityId,
+      updates.programId !== undefined
+        ? updates.programId
+        : existingProfile.programId,
+    );
+
+    await this.studentProfileRepository.update(userId, updates);
+
+    return this.studentProfileRepository.findDetailsByUserId(userId);
+  }
+
+  /**
+   * Checks the university and programme a profile is about to record.
+   *
+   * Anything that is set has to exist, and a programme has to belong to the
+   * university the profile will carry, so the pair can never describe a course the
+   * university does not offer. `null` on either means "not recorded", which is a
+   * valid state rather than a contradiction, and is what keeps every profile that
+   * existed before the academic graph working exactly as it did.
+   */
+  private async validateAcademicAffiliation(
+    universityId: string | null,
+    programId: string | null,
+  ): Promise<void> {
+    if (universityId) {
+      const university = await this.universityRepository.findById(universityId);
 
       if (!university) {
         throw new Error(STUDENT_PROFILE_UNKNOWN_UNIVERSITY_MESSAGE);
       }
     }
 
-    await this.studentProfileRepository.update(userId, updates);
+    if (programId) {
+      const program = await this.programRepository.findById(programId);
 
-    return this.studentProfileRepository.findDetailsByUserId(userId);
+      if (!program) {
+        throw new Error(STUDENT_PROFILE_UNKNOWN_PROGRAM_MESSAGE);
+      }
+
+      if (universityId && program.universityId !== universityId) {
+        throw new Error(STUDENT_PROFILE_PROGRAM_UNIVERSITY_MISMATCH_MESSAGE);
+      }
+    }
   }
 
   /** Replaces the signed-in student's skills with exactly `skillIds`. */
@@ -198,4 +259,3 @@ export class StudentProfileService {
     return this.studentProfileRepository.update(userId, updates);
   }
 }
-

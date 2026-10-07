@@ -5,6 +5,11 @@ import { authRouter } from "./routes/auth.routes";
 import { userRouter } from "./routes/user.routes";
 import { studentProfileRouter } from "./routes/student-profile.routes";
 import { universityRouter } from "./routes/university.routes";
+import {
+  programRouter,
+  universityProgramRouter,
+} from "./routes/program.routes";
+import { subjectRouter } from "./routes/subject.routes";
 import { skillRouter } from "./routes/skill.routes";
 import { interestRouter } from "./routes/interest.routes";
 import { studentSkillRouter } from "./routes/student-skill.routes";
@@ -28,6 +33,7 @@ import {
   postReactionRouter,
 } from "./routes/reaction.routes";
 import { feedRouter } from "./routes/feed.routes";
+import { searchRouter } from "./routes/search.routes";
 dotenv.config();
 
 const app = express();
@@ -49,6 +55,12 @@ app.use("/api/v1/auth", authRouter);
 app.use("/api/v1/users", userRouter);
 app.use("/api/v1/student-profiles", studentProfileRouter);
 app.use("/api/v1/universities", universityRouter);
+app.use(
+  "/api/v1/universities/:universityId/programs",
+  universityProgramRouter,
+);
+app.use("/api/v1/programs", programRouter);
+app.use("/api/v1/subjects", subjectRouter);
 app.use("/api/v1/skills", skillRouter);
 app.use("/api/v1/interests", interestRouter);
 app.use(
@@ -73,6 +85,7 @@ app.use("/api/v1/posts", postRouter);
 app.use("/api/v1/comments/:commentId/reactions", commentReactionRouter);
 app.use("/api/v1/comments", commentRouter);
 app.use("/api/v1/feed", feedRouter);
+app.use("/api/v1/search", searchRouter);
 app.listen(PORT, () => {
   console.log(`BridgeEd API running on http://localhost:${PORT}`);
 });

@@ -1,11 +1,5 @@
 import { useCallback, useMemo, useState } from "react";
-import {
-  FlatList,
-  RefreshControl,
-  StyleSheet,
-  TextInput,
-  View,
-} from "react-native";
+import { FlatList, RefreshControl, View } from "react-native";
 import { router } from "expo-router";
 import {
   COMMUNITY_MEMBERSHIP_STATUSES,
@@ -22,6 +16,7 @@ import {
   InlineError,
   PageHeader,
   Screen,
+  SearchField,
   SectionHeading,
   SkeletonList,
 } from "@/components";
@@ -45,64 +40,6 @@ function matchesSearch(community: Community, query: string): boolean {
     .join(" ")
     .toLowerCase()
     .includes(query);
-}
-
-interface SearchFieldProps {
-  value: string;
-  placeholder: string;
-  onChangeText: (value: string) => void;
-  onClear: () => void;
-}
-
-function SearchField({
-  value,
-  placeholder,
-  onChangeText,
-  onClear,
-}: SearchFieldProps) {
-  const { colors, layout, radius, spacing, typography } = useTheme();
-
-  return (
-    <View
-      style={[
-        styles.search,
-        {
-          gap: spacing.sm,
-          minHeight: layout.minTouchTarget,
-          backgroundColor: colors.surface,
-          borderColor: colors.border,
-          borderRadius: radius.md,
-          paddingLeft: spacing.md,
-          paddingRight: spacing.xs,
-        },
-      ]}
-    >
-      <Icon name="search" size={layout.icon.sm} tone="textMuted" />
-      <TextInput
-        value={value}
-        onChangeText={onChangeText}
-        placeholder={placeholder}
-        placeholderTextColor={colors.textMuted}
-        accessibilityLabel="Search communities"
-        autoCapitalize="none"
-        autoCorrect={false}
-        returnKeyType="search"
-        style={[
-          styles.searchInput,
-          typography.body,
-          { color: colors.textPrimary },
-        ]}
-      />
-      {value.length > 0 ? (
-        <IconButton
-          icon="close-circle"
-          accessibilityLabel="Clear the search"
-          size={layout.icon.md}
-          onPress={onClear}
-        />
-      ) : null}
-    </View>
-  );
 }
 
 /**
@@ -307,6 +244,7 @@ export default function CommunitiesScreen() {
               <SearchField
                 value={search}
                 placeholder="Search by name or description"
+                accessibilityLabel="Search communities"
                 onChangeText={setSearch}
                 onClear={() => setSearch("")}
               />
@@ -394,14 +332,3 @@ export default function CommunitiesScreen() {
     </Screen>
   );
 }
-
-const styles = StyleSheet.create({
-  search: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  searchInput: {
-    flex: 1,
-    paddingVertical: 8,
-  },
-});

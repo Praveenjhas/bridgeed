@@ -5,6 +5,7 @@ import type {
 } from "@bridgeed/shared/src/types/user";
 import { toInterest } from "./interest.repository";
 import { prisma } from "../config/prisma";
+import { toProgram } from "./program.repository";
 import { toSkill } from "./skill.repository";
 import { toUniversity } from "./university.repository";
 
@@ -22,6 +23,7 @@ export class StudentProfileRepository {
       username: profile.username,
       bio: profile.bio,
       universityId: profile.universityId,
+      programId: profile.programId,
       degree: profile.degree,
       branch: profile.branch,
       graduationYear: profile.graduationYear,
@@ -57,6 +59,7 @@ export class StudentProfileRepository {
       },
       include: {
         university: true,
+        program: { include: { university: { select: { name: true } } } },
         skills: {
           include: { skill: true },
           orderBy: { skill: { name: "asc" } },
@@ -77,6 +80,9 @@ export class StudentProfileRepository {
     return {
       ...base,
       university: profile.university ? toUniversity(profile.university) : null,
+      program: profile.program
+        ? toProgram(profile.program, profile.program.university.name)
+        : null,
       skills: profile.skills.map((record) => toSkill(record.skill)),
       interests: profile.interests.map((record) => toInterest(record.interest)),
     };
@@ -131,6 +137,7 @@ export class StudentProfileRepository {
         username: profile.username,
         bio: profile.bio,
         universityId: profile.universityId,
+        programId: profile.programId,
         degree: profile.degree,
         branch: profile.branch,
         graduationYear: profile.graduationYear,

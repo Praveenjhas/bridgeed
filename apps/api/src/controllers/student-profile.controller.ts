@@ -2,6 +2,8 @@ import type { Request, Response } from "express";
 import { requireAuthContext } from "../middleware/require-auth";
 import {
   StudentProfileService,
+  STUDENT_PROFILE_PROGRAM_UNIVERSITY_MISMATCH_MESSAGE,
+  STUDENT_PROFILE_UNKNOWN_PROGRAM_MESSAGE,
   STUDENT_PROFILE_UNKNOWN_UNIVERSITY_MESSAGE,
   type UpdateStudentProfileInput,
 } from "../services/student-profile.service";
@@ -40,6 +42,7 @@ const GRADUATION_YEAR_MAX = 2100;
 interface OptionalProfileFields {
   bio: string | null | undefined;
   universityId: string | null | undefined;
+  programId: string | null | undefined;
   degree: string | null | undefined;
   branch: string | null | undefined;
   graduationYear: number | null | undefined;
@@ -346,12 +349,21 @@ export class StudentProfileController {
     const {
       bio,
       universityId,
+      programId,
       degree,
       branch,
       graduationYear,
       profileImageUrl,
       location,
     } = body;
+
+    if (
+      programId !== undefined &&
+      programId !== null &&
+      typeof programId !== "string"
+    ) {
+      return { kind: "invalid", message: "programId must be a string or null" };
+    }
 
     if (bio !== undefined && bio !== null && typeof bio !== "string") {
       return { kind: "invalid", message: "bio must be a string or null" };
@@ -373,6 +385,7 @@ export class StudentProfileController {
       fields: {
         bio: bio as string | null | undefined,
         universityId: universityId as string | null | undefined,
+        programId: programId as string | null | undefined,
         degree: degree as string | null | undefined,
         branch: branch as string | null | undefined,
         graduationYear: graduationYear as number | null | undefined,
@@ -468,6 +481,21 @@ export class StudentProfileController {
       }
     }
 
+    if ("programId" in body) {
+      const programId = body["programId"];
+
+      if (programId === null) {
+        updates.programId = null;
+      } else if (typeof programId === "string" && programId.length > 0) {
+        updates.programId = programId;
+      } else {
+        return {
+          kind: "invalid",
+          message: "programId must be a string or null",
+        };
+      }
+    }
+
     if ("graduationYear" in body) {
       const graduationYear = body["graduationYear"];
 
@@ -518,7 +546,9 @@ export class StudentProfileController {
   private sendUpdateError(error: unknown, res: Response): void {
     if (
       error instanceof Error &&
-      error.message === STUDENT_PROFILE_UNKNOWN_UNIVERSITY_MESSAGE
+      (error.message === STUDENT_PROFILE_UNKNOWN_UNIVERSITY_MESSAGE ||
+        error.message === STUDENT_PROFILE_UNKNOWN_PROGRAM_MESSAGE ||
+        error.message === STUDENT_PROFILE_PROGRAM_UNIVERSITY_MISMATCH_MESSAGE)
     ) {
       res.status(400).json({ error: error.message });
       return;
@@ -596,6 +626,16 @@ export class StudentProfileController {
       error.message === STUDENT_PROFILE_ALREADY_EXISTS_MESSAGE
     ) {
       res.status(409).json({ error: error.message });
+      return;
+    }
+
+    if (
+      error instanceof Error &&
+      (error.message === STUDENT_PROFILE_UNKNOWN_UNIVERSITY_MESSAGE ||
+        error.message === STUDENT_PROFILE_UNKNOWN_PROGRAM_MESSAGE ||
+        error.message === STUDENT_PROFILE_PROGRAM_UNIVERSITY_MISMATCH_MESSAGE)
+    ) {
+      res.status(400).json({ error: error.message });
       return;
     }
 
