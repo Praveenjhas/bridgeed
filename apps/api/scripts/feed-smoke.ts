@@ -24,7 +24,11 @@ import {
   FEED_DEFAULT_LIMIT,
   FEED_MAX_LIMIT,
   FEED_REASON_CODES,
+  POST_TYPES,
+  POST_TYPE_VALUES,
+  type PostType,
 } from "@bridgeed/shared";
+import type { PostType as PostTypeRecord } from "../src/generated/prisma/enums";
 import { prisma } from "../src/config/prisma";
 import { STUDENT_PROFILE_NOT_FOUND_MESSAGE } from "../src/services/community.service";
 import {
@@ -110,7 +114,11 @@ function expectStatus(
   );
 }
 
-function expectEqual(name: string, actual: unknown, expected: unknown): boolean {
+function expectEqual(
+  name: string,
+  actual: unknown,
+  expected: unknown,
+): boolean {
   return record(name, actual === expected, { expected, actual });
 }
 
@@ -132,7 +140,10 @@ function expectError(
     ok,
     ok
       ? undefined
-      : { expected: { status, message }, actual: { status: result.status, error } },
+      : {
+          expected: { status, message },
+          actual: { status: result.status, error },
+        },
   );
 }
 
@@ -400,14 +411,10 @@ function expectRankedBefore(
   const earlier = indexOfId(order, earlierId);
   const later = indexOfId(order, laterId);
 
-  return record(
-    label,
-    earlier !== -1 && later !== -1 && earlier < later,
-    {
-      earlier: { id: earlierId, index: earlier },
-      later: { id: laterId, index: later },
-    },
-  );
+  return record(label, earlier !== -1 && later !== -1 && earlier < later, {
+    earlier: { id: earlierId, index: earlier },
+    later: { id: laterId, index: later },
+  });
 }
 
 async function createStudent(
@@ -526,6 +533,9 @@ async function seedMembership(
 /**
  * Posts are seeded through Prisma so their `createdAt` can be placed in the
  * past, which is what makes the recency checks deterministic.
+ *
+ * `type` defaults to DISCUSSION, which is what the column default is, so only
+ * the posts that exist to prove type flows through the feed name one.
  */
 async function seedPost(
   context: SmokeContext,
@@ -537,6 +547,7 @@ async function seedPost(
     /** Explicit timestamp, used when two posts must share one instant. */
     createdAt?: Date;
     deleted?: boolean;
+    type?: PostTypeRecord;
   },
 ): Promise<string> {
   const createdAt =
@@ -548,16 +559,17 @@ async function seedPost(
       authorId: data.authorId,
       communityId: data.communityId,
       content: `Smoke ${label} ${RUN_ID}`,
-      type: "TEXT",
+      type: data.type ?? "DISCUSSION",
       createdAt,
       deletedAt: data.deleted === true ? new Date() : null,
     },
-    select: { id: true, createdAt: true, deletedAt: true },
+    select: { id: true, createdAt: true, deletedAt: true, type: true },
   });
 
   record(
     `setup: post seeded (${label})`,
     created.createdAt.getTime() === createdAt.getTime() &&
+      created.type === (data.type ?? "DISCUSSION") &&
       (data.deleted !== true || created.deletedAt !== null),
     { expected: createdAt, actual: created.createdAt },
   );
@@ -970,6 +982,9 @@ async function seedFixturePosts(
       authorId: users.connection,
       communityId: communities.publicA,
       ageHours: BASELINE_AGE_HOURS,
+      // A question is ranked exactly like any other post: type is metadata, not
+      // a signal, and this is the post the type checks read back.
+      type: "QUESTION",
     }),
     pendingPost: await seedPost(context, "pending-post", {
       authorId: users.pending,
@@ -997,6 +1012,9 @@ async function seedFixturePosts(
     quietPost: await seedPost(context, "quiet-post", {
       ...baselineAuthor,
       ageHours: BASELINE_AGE_HOURS,
+      // A resource is also just a post: it proves a non-default type survives
+      // hydration, not that the feed treats it differently.
+      type: "RESOURCE",
     }),
     engagedPost: await seedPost(context, "engaged-post", {
       ...baselineAuthor,
@@ -1098,7 +1116,11 @@ async function seedFixtureRelationships(
     users.connection,
   );
 
-  await acceptConnection("reader-connection", acceptedRequestId, users.connection);
+  await acceptConnection(
+    "reader-connection",
+    acceptedRequestId,
+    users.connection,
+  );
 
   // left pending on purpose: a pending request is a weaker signal than an
   // accepted connection
@@ -1266,6 +1288,48 @@ async function runCandidacyChecks(fixture: FeedFixture): Promise<WalkedFeed> {
         typeof asRecord(item["author"])["userId"] === "string" &&
         typeof asRecord(item["community"])["id"] === "string",
     ),
+  );
+
+  // Type is metadata on a post: every hydrated item carries one, a non default
+  // type survives hydration, and a seeded post that named none is a discussion.
+  expectTrue(
+    "candidacy: every item carries a canonical post type",
+    walk.items.every((item) => {
+      const type = readString(item, "type");
+
+      return type !== null && POST_TYPE_VALUES.includes(type as PostType);
+    }),
+    walk.items.map((item) => readString(item, "type")),
+  );
+
+  const itemFor = (id: string) =>
+    walk.items.find((item) => readString(item, "id") === id);
+  const questionItem = itemFor(fixture.posts.connectionPost);
+  const resourceItem = itemFor(fixture.posts.quietPost);
+  const plainItem = itemFor(fixture.posts.plainPost);
+
+  expectEqual(
+    "candidacy: a question is returned with its type",
+    questionItem ? readString(questionItem, "type") : null,
+    POST_TYPES.QUESTION,
+  );
+  expectEqual(
+    "candidacy: a resource is returned with its type",
+    resourceItem ? readString(resourceItem, "type") : null,
+    POST_TYPES.RESOURCE,
+  );
+  expectEqual(
+    "candidacy: a post that names no type is a discussion",
+    plainItem ? readString(plainItem, "type") : null,
+    POST_TYPES.DISCUSSION,
+  );
+  expectTrue(
+    "candidacy: a typed post carries the ordinary feed metadata",
+    questionItem !== undefined &&
+      typeof questionItem["score"] === "number" &&
+      typeof questionItem["rank"] === "number" &&
+      Array.isArray(questionItem["reasons"]),
+    questionItem,
   );
   expectTrue(
     "candidacy: no item exposes an account level field",
@@ -1458,7 +1522,9 @@ function runReasonChecks(walk: WalkedFeed, fixture: FeedFixture): void {
   );
   expectTrue(
     "reasons: a shared skill is reported",
-    reasonsFor(fixture.posts.alikePost).includes(FEED_REASON_CODES.SHARED_SKILL),
+    reasonsFor(fixture.posts.alikePost).includes(
+      FEED_REASON_CODES.SHARED_SKILL,
+    ),
   );
   expectTrue(
     "reasons: a shared interest is reported",
@@ -1468,7 +1534,9 @@ function runReasonChecks(walk: WalkedFeed, fixture: FeedFixture): void {
   );
   expectTrue(
     "reasons: an unrelated author reports no shared skill",
-    !reasonsFor(fixture.posts.baseline).includes(FEED_REASON_CODES.SHARED_SKILL),
+    !reasonsFor(fixture.posts.baseline).includes(
+      FEED_REASON_CODES.SHARED_SKILL,
+    ),
   );
   expectTrue(
     "reasons: an unrelated author reports no shared interest",
@@ -1478,7 +1546,9 @@ function runReasonChecks(walk: WalkedFeed, fixture: FeedFixture): void {
   );
   expectTrue(
     "reasons: the actor's own post is labelled",
-    reasonsFor(fixture.posts.ownPost).includes(FEED_REASON_CODES.AUTHORED_BY_ME),
+    reasonsFor(fixture.posts.ownPost).includes(
+      FEED_REASON_CODES.AUTHORED_BY_ME,
+    ),
   );
   expectTrue(
     "reasons: an engaged post is labelled",
@@ -1559,8 +1629,14 @@ async function runStabilityChecks(
 ): Promise<void> {
   console.log("\n--- stability ---");
 
-  const first = await api("GET", feedPath(fixture.users.reader, FEED_MAX_LIMIT));
-  const second = await api("GET", feedPath(fixture.users.reader, FEED_MAX_LIMIT));
+  const first = await api(
+    "GET",
+    feedPath(fixture.users.reader, FEED_MAX_LIMIT),
+  );
+  const second = await api(
+    "GET",
+    feedPath(fixture.users.reader, FEED_MAX_LIMIT),
+  );
 
   expectStatus("stability: the first call responds 200", first, 200);
   expectStatus("stability: the repeated call responds 200", second, 200);
@@ -1642,7 +1718,11 @@ async function runLimitChecks(
   const single = await api("GET", feedPath(reader, 1));
 
   expectStatus("limit: limit=1 responds 200", single, 200);
-  expectEqual("limit: limit=1 returns a single item", feedItemIds(single.body).length, 1);
+  expectEqual(
+    "limit: limit=1 returns a single item",
+    feedItemIds(single.body).length,
+    1,
+  );
   expectEqual(
     "limit: limit=1 returns the top ranked post",
     feedItemIds(single.body)[0],
@@ -1652,7 +1732,11 @@ async function runLimitChecks(
   const three = await api("GET", feedPath(reader, 3));
 
   expectStatus("limit: limit=3 responds 200", three, 200);
-  expectEqual("limit: limit=3 returns three items", feedItemIds(three.body).length, 3);
+  expectEqual(
+    "limit: limit=3 returns three items",
+    feedItemIds(three.body).length,
+    3,
+  );
   expectEqual(
     "limit: limit=3 stays in ranking order",
     feedItemIds(three.body).join(","),
@@ -1731,8 +1815,16 @@ async function runCursorChecks(
   const page2Ids = feedItemIds(page2.body);
   const overlap = page1Ids.filter((id) => page2Ids.includes(id));
 
-  expectEqual("cursor: the second page has the requested size", page2Ids.length, 8);
-  expectEqual("cursor: consecutive pages never repeat an item", overlap.length, 0);
+  expectEqual(
+    "cursor: the second page has the requested size",
+    page2Ids.length,
+    8,
+  );
+  expectEqual(
+    "cursor: consecutive pages never repeat an item",
+    overlap.length,
+    0,
+  );
   expectEqual(
     "cursor: the second page continues the ranking",
     page2Ids.join(","),
@@ -1769,9 +1861,15 @@ async function runCursorChecks(
     decodedCursor,
   );
 
-  const nullCursors = walk.cursorValues.filter((value) => value === null).length;
+  const nullCursors = walk.cursorValues.filter(
+    (value) => value === null,
+  ).length;
 
-  expectEqual("cursor: only the final page terminates the feed", nullCursors, 1);
+  expectEqual(
+    "cursor: only the final page terminates the feed",
+    nullCursors,
+    1,
+  );
   expectEqual(
     "cursor: the final page terminates the feed",
     walk.cursorValues[walk.cursorValues.length - 1],
@@ -2217,10 +2315,7 @@ async function auditCleanup(
   });
   const leftoverMemberships = await prisma.communityMembership.count({
     where: {
-      OR: [
-        { communityId: { in: communityIds } },
-        { userId: { in: userIds } },
-      ],
+      OR: [{ communityId: { in: communityIds } }, { userId: { in: userIds } }],
     },
   });
   const leftoverPosts = await prisma.post.count({

@@ -288,7 +288,10 @@ model Post {
   authorId    String
   communityId String
   content     String
-  type        PostType  @default(TEXT)
+  /// What kind of academic content this post is. Every post carries one; a post
+  /// written before types existed is a DISCUSSION, which is also the default for
+  /// a client that does not choose a type.
+  type        PostType  @default(DISCUSSION)
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
   deletedAt   DateTime?
@@ -396,8 +399,18 @@ enum CommunityMembershipStatus {
   BANNED
 }
 
+/// The kinds of academic content a post can carry. The set is closed and small
+/// on purpose: a student should be able to tell what a post is at a glance, and
+/// an open vocabulary would make that impossible. DISCUSSION is the default, so
+/// content written before this enum existed stays valid.
 enum PostType {
-  TEXT
+  DISCUSSION
+  QUESTION
+  RESOURCE
+  ACHIEVEMENT
+  RESEARCH
+  ANNOUNCEMENT
+  OPPORTUNITY
 }
 
 enum ReactionType {

@@ -1,4 +1,4 @@
-import type { ContentAuthor } from "./post";
+import type { ContentAuthor, PostType } from "./post";
 
 export interface Comment {
   id: string;
@@ -28,6 +28,8 @@ export interface CommentPostSummary {
   id: string;
   communityId: string;
   authorId: string;
+  /** Type of the post the comment belongs to. */
+  type: PostType;
 }
 
 /** A comment enriched with author, post reference and engagement counts. */

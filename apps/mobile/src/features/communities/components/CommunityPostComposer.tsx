@@ -1,6 +1,11 @@
 import { useState } from "react";
 import { StyleSheet, TextInput, View } from "react-native";
-import { AppText, Button, InlineError } from "@/components";
+import {
+  DEFAULT_POST_TYPE,
+  POST_TYPE_LABELS,
+  type PostType,
+} from "@bridgeed/shared";
+import { AppText, Button, InlineError, PostTypeSelector } from "@/components";
 import { useTheme } from "@/theme";
 import { MAX_POST_CONTENT_LENGTH } from "../constants";
 
@@ -11,7 +16,7 @@ export interface CommunityPostComposerProps {
   errorMessage: string | null;
   onDismissError: () => void;
   /** Creates the post. Resolves true when the API accepted it. */
-  onSubmit: (content: string) => Promise<boolean>;
+  onSubmit: (content: string, type: PostType) => Promise<boolean>;
 }
 
 /**
@@ -22,6 +27,13 @@ export interface CommunityPostComposerProps {
  * field is only emptied after the API accepted the post, so a rejected draft is
  * never lost, and the button reports its own busy state so a double tap cannot
  * post twice.
+ *
+ * The type appears with the draft rather than before it. A student who is about to
+ * write a quick reply sees the same single line they always did, and one who has
+ * started writing is offered the seven kinds of content as quiet chips — the same
+ * choice the full composer gives, without turning the bottom of a community into a
+ * form. The chosen type stays chosen after posting, because writing two questions
+ * in a row is normal.
  */
 export function CommunityPostComposer({
   communityName,
@@ -32,12 +44,14 @@ export function CommunityPostComposer({
 }: CommunityPostComposerProps) {
   const { colors, radius, spacing, typography } = useTheme();
   const [content, setContent] = useState("");
+  const [type, setType] = useState<PostType>(DEFAULT_POST_TYPE);
   const length = content.length;
   const isOverLimit = length > MAX_POST_CONTENT_LENGTH;
   const canSubmit = !isSubmitting && content.trim().length > 0 && !isOverLimit;
+  const hasDraft = length > 0;
 
   const handleSubmit = async () => {
-    const created = await onSubmit(content);
+    const created = await onSubmit(content, type);
 
     if (created) {
       setContent("");
@@ -48,6 +62,16 @@ export function CommunityPostComposer({
     <View style={{ gap: spacing.sm }}>
       {errorMessage ? (
         <InlineError message={errorMessage} onDismiss={onDismissError} />
+      ) : null}
+
+      {hasDraft ? (
+        <PostTypeSelector
+          variant="chips"
+          label="Posting as"
+          value={type}
+          onChange={setType}
+          disabled={isSubmitting}
+        />
       ) : null}
 
       <View
@@ -89,7 +113,7 @@ export function CommunityPostComposer({
           <AppText variant="caption" tone="muted" style={styles.metaText}>
             {isOverLimit
               ? `Shorten your post by ${length - MAX_POST_CONTENT_LENGTH} characters.`
-              : "Cancel clears this draft. Nothing is posted until you tap Post."}
+              : `Shared as a ${POST_TYPE_LABELS[type].toLowerCase()}. Nothing is posted until you tap Post.`}
           </AppText>
           <Button
             label="Cancel"

@@ -3,8 +3,16 @@ import {
   FEED_REASON_CODES,
   type ContentAuthor,
   type FeedReasonCode,
+  type PostType,
 } from "@bridgeed/shared";
-import { AppText, Avatar, Card, Icon, type IconName } from "@/components";
+import {
+  AppText,
+  Avatar,
+  Card,
+  Icon,
+  PostTypeLabel,
+  type IconName,
+} from "@/components";
 import { useTheme } from "@/theme";
 import { formatRelativeTime } from "@/utils/datetime";
 
@@ -110,6 +118,8 @@ function PostAction({
  */
 export interface PostCardItem {
   id: string;
+  /** What kind of academic content this is; shown above the author. */
+  type: PostType;
   content: string;
   createdAt: string;
   author: ContentAuthor;
@@ -179,27 +189,28 @@ export function PostCard<Item extends PostCardItem>({
 
   const body = (
     <View style={{ gap: spacing.sm }}>
-        <View style={[styles.header, { gap: spacing.md }]}>
-          <Avatar
-            name={item.author.name}
-            imageUrl={item.author.profileImageUrl}
-          />
-          <View style={styles.headerText}>
-            <AppText variant="subheading" numberOfLines={1}>
-              {item.author.name}
-            </AppText>
-            <AppText variant="caption" tone="muted" numberOfLines={1}>
-              {metaParts.join(" · ")}
-            </AppText>
-          </View>
-          {showRanking && typeof item.rank === "number" ? (
-            <AppText variant="caption" tone="muted">
-              {`#${item.rank}`}
-            </AppText>
-          ) : null}
+      <PostTypeLabel type={item.type} />
+      <View style={[styles.header, { gap: spacing.md }]}>
+        <Avatar
+          name={item.author.name}
+          imageUrl={item.author.profileImageUrl}
+        />
+        <View style={styles.headerText}>
+          <AppText variant="subheading" numberOfLines={1}>
+            {item.author.name}
+          </AppText>
+          <AppText variant="caption" tone="muted" numberOfLines={1}>
+            {metaParts.join(" · ")}
+          </AppText>
         </View>
+        {showRanking && typeof item.rank === "number" ? (
+          <AppText variant="caption" tone="muted">
+            {`#${item.rank}`}
+          </AppText>
+        ) : null}
+      </View>
 
-        <AppText>{item.content}</AppText>
+      <AppText>{item.content}</AppText>
 
       {showRanking && visibleReasons.length > 0 ? (
         <AppText variant="caption" tone="muted" numberOfLines={1}>

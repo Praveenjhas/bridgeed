@@ -1,5 +1,9 @@
 import { useCallback, useState } from "react";
-import { DEFAULT_PAGE, type PostListItem } from "@bridgeed/shared";
+import {
+  DEFAULT_PAGE,
+  type PostListItem,
+  type PostType,
+} from "@bridgeed/shared";
 import { usePaginatedList } from "@/hooks/usePaginatedList";
 import type { LoadStatus } from "@/hooks/useAsyncValue";
 import { ApiError } from "@/services/api";
@@ -15,7 +19,7 @@ import {
 
 export interface CommunityPostsState {
   posts: PostListItem[];
-  /** Total number of posts the API reports for the community. */
+  /** Total number of posts the API reports for the community (and the filter). */
   total: number | null;
   status: LoadStatus;
   errorMessage: string | null;
@@ -33,7 +37,7 @@ export interface CommunityPostsState {
   submitErrorMessage: string | null;
   dismissSubmitError: () => void;
   /** Creates a post. Resolves true when the API accepted it. */
-  submit: (content: string) => Promise<boolean>;
+  submit: (content: string, type?: PostType) => Promise<boolean>;
 }
 
 /**
@@ -42,6 +46,12 @@ export interface CommunityPostsState {
  * Reading is opt in: `enabled` is false until the reader is a known active
  * member, because the API requires exactly that and asking anyway would only
  * produce an error the screen has to explain away.
+ *
+ * `typeFilter` narrows the listing to one kind of content. It is passed in rather
+ * than owned here, because the choice belongs to the screen's filter control, and
+ * it is part of the page loader's identity: changing it starts the list again from
+ * page one instead of appending a filtered page to an unfiltered one, and the
+ * totals the screen shows are always those of the set it is looking at.
  *
  * After a successful write the first page is re-read instead of being patched
  * locally. The create endpoint returns the stored post, but not the author or the
@@ -52,6 +62,7 @@ export function useCommunityPosts(
   communityId: string | null,
   actorId: string | null,
   enabled: boolean,
+  typeFilter: PostType | null = null,
 ): CommunityPostsState {
   const [total, setTotal] = useState<number | null>(null);
   const [errorStatus, setErrorStatus] = useState<number | null>(null);
@@ -73,6 +84,7 @@ export function useCommunityPosts(
           communityId,
           page: requestedPage,
           limit: COMMUNITY_POSTS_PAGE_LIMIT,
+          type: typeFilter,
           signal,
         });
 
@@ -94,7 +106,7 @@ export function useCommunityPosts(
         throw error;
       }
     },
-    [actorId, communityId],
+    [actorId, communityId, typeFilter],
   );
 
   const list = usePaginatedList<PostListItem, number>({
@@ -105,7 +117,7 @@ export function useCommunityPosts(
   const { refresh } = list;
 
   const submit = useCallback(
-    async (content: string): Promise<boolean> => {
+    async (content: string, type?: PostType): Promise<boolean> => {
       if (!communityId || !actorId) {
         return false;
       }
@@ -131,6 +143,7 @@ export function useCommunityPosts(
         await createCommunityPost({
           communityId,
           content: trimmed,
+          type,
         });
         refresh();
         return true;

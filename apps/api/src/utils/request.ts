@@ -1,5 +1,10 @@
 import type { Request } from "express";
-import { SEARCH_TYPE_VALUES, type SearchType } from "@bridgeed/shared";
+import {
+  POST_TYPE_VALUES,
+  SEARCH_TYPE_VALUES,
+  type PostType,
+  type SearchType,
+} from "@bridgeed/shared";
 
 export interface PaginationQuery {
   page?: number;
@@ -127,6 +132,31 @@ export function readSearchType(req: Request): SearchType | undefined | null {
   const candidate = type.trim();
 
   return SEARCH_TYPE_VALUES.find((value) => value === candidate) ?? null;
+}
+
+/**
+ * Reads the optional `type` of a community post listing.
+ *
+ * `undefined` when the client sent none, `null` when the value is not a single
+ * string or not one of the canonical post types, and otherwise the narrowed type.
+ * The controller turns `null` into a 400, so an unknown filter is refused rather
+ * than silently ignored — a client that asks for "questions" and receives every
+ * post would look like it worked.
+ */
+export function readPostType(req: Request): PostType | undefined | null {
+  const { type } = req.query;
+
+  if (type === undefined) {
+    return undefined;
+  }
+
+  if (typeof type !== "string") {
+    return null;
+  }
+
+  const candidate = type.trim().toLowerCase();
+
+  return POST_TYPE_VALUES.find((value) => value === candidate) ?? null;
 }
 
 /**

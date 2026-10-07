@@ -1,20 +1,38 @@
-import type {
-  PageWindow,
-  Post,
-  PostDetails,
-  PostListItem,
-  PostType,
+import {
+  POST_TYPES,
+  type PageWindow,
+  type Post,
+  type PostDetails,
+  type PostListItem,
+  type PostType,
 } from "@bridgeed/shared";
 import type { PostType as PostTypeRecord } from "../generated/prisma/enums";
 import { prisma } from "../config/prisma";
 import { toCommunity } from "./community.repository";
 
+/**
+ * The database stores the type in upper case and the wire contract uses lower
+ * case, so every direction goes through one explicit table instead of a
+ * `toUpperCase()` that would silently accept a value nobody defined.
+ */
 const typeByDatabaseType: Record<PostTypeRecord, PostType> = {
-  TEXT: "text",
+  DISCUSSION: POST_TYPES.DISCUSSION,
+  QUESTION: POST_TYPES.QUESTION,
+  RESOURCE: POST_TYPES.RESOURCE,
+  ACHIEVEMENT: POST_TYPES.ACHIEVEMENT,
+  RESEARCH: POST_TYPES.RESEARCH,
+  ANNOUNCEMENT: POST_TYPES.ANNOUNCEMENT,
+  OPPORTUNITY: POST_TYPES.OPPORTUNITY,
 };
 
 const typeToDatabaseType: Record<PostType, PostTypeRecord> = {
-  text: "TEXT",
+  [POST_TYPES.DISCUSSION]: "DISCUSSION",
+  [POST_TYPES.QUESTION]: "QUESTION",
+  [POST_TYPES.RESOURCE]: "RESOURCE",
+  [POST_TYPES.ACHIEVEMENT]: "ACHIEVEMENT",
+  [POST_TYPES.RESEARCH]: "RESEARCH",
+  [POST_TYPES.ANNOUNCEMENT]: "ANNOUNCEMENT",
+  [POST_TYPES.OPPORTUNITY]: "OPPORTUNITY",
 };
 
 /** Only public profile columns are selected for content authors. */
@@ -68,11 +86,22 @@ export function toPost(record: PostRecord): Post {
     authorId: record.authorId,
     communityId: record.communityId,
     content: record.content,
-    type: typeByDatabaseType[record.type],
+    type: toPostType(record.type),
     createdAt: record.createdAt.toISOString(),
     updatedAt: record.updatedAt.toISOString(),
     deletedAt: record.deletedAt ? record.deletedAt.toISOString() : null,
   };
+}
+
+/**
+ * The wire value of a stored post type.
+ *
+ * It is exported because a post summary embedded in another response (a comment
+ * carries a minimal post reference) must resolve the type the same way, and a
+ * second copy of the table would be a second place to forget.
+ */
+export function toPostType(record: PostTypeRecord): PostType {
+  return typeByDatabaseType[record];
 }
 
 function toAuthor(record: AuthorRecord): PostListItem["author"] {
@@ -143,14 +172,27 @@ export class PostRepository {
     return toPost(record);
   }
 
+  /**
+   * One page of a community's posts, newest first.
+   *
+   * `type` narrows the listing to a single kind of content. It is applied
+   * alongside the community and soft-delete filters, so ordering, the page
+   * window and the engagement counts are untouched: a filtered page is the same
+   * page of a smaller set rather than a different query shape. The index the
+   * listing already uses (`[communityId, deletedAt]`) keeps serving it, because
+   * a community's posts are bounded — the type is a cheap filter on top, not
+   * something that needs an index of its own.
+   */
   async listByCommunity(
     communityId: string,
     window: PageWindow,
+    type?: PostType,
   ): Promise<PostListItem[]> {
     const records = await prisma.post.findMany({
       where: {
         communityId,
         deletedAt: null,
+        ...(type ? { type: typeToDatabaseType[type] } : {}),
       },
       orderBy: [{ createdAt: "desc" }, { id: "asc" }],
       skip: window.skip,
@@ -185,11 +227,20 @@ export class PostRepository {
     }));
   }
 
-  async countByCommunity(communityId: string): Promise<number> {
+  /**
+   * How many posts the community holds. `type` counts the same filtered set the
+   * listing reads, so a filtered page always reports its own total and the page
+   * count cannot disagree with the items.
+   */
+  async countByCommunity(
+    communityId: string,
+    type?: PostType,
+  ): Promise<number> {
     return prisma.post.count({
       where: {
         communityId,
         deletedAt: null,
+        ...(type ? { type: typeToDatabaseType[type] } : {}),
       },
     });
   }

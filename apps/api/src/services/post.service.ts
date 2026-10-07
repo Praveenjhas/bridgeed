@@ -1,5 +1,6 @@
 import {
-  POST_TYPES,
+  DEFAULT_POST_TYPE,
+  POST_TYPE_VALUES,
   type Paginated,
   type Post,
   type PostDetails,
@@ -31,17 +32,18 @@ export const POST_DELETE_FORBIDDEN_MESSAGE =
 
 const MAX_POST_CONTENT_LENGTH = 5000;
 
-const POST_TYPE_VALUES: readonly string[] = Object.values(POST_TYPES);
-
 export interface CreatePostInput {
   authorId: unknown;
   content: unknown;
+  /** Optional canonical type; omitted by clients that do not choose one. */
   type?: unknown;
 }
 
 export interface ListPostsQuery {
   page?: number;
   limit?: number;
+  /** Narrows the listing to one kind of content. Omitted means every type. */
+  type?: PostType;
 }
 
 export class PostService {
@@ -52,9 +54,13 @@ export class PostService {
   ) {}
 
   /**
-   * Creates a post inside a community. The author must be an active member;
-   * the post type is always TEXT in this version and any other value sent by
-   * the client is rejected instead of trusted.
+   * Creates a post inside a community. The author must be an active member; the
+   * author is always taken from the authenticated actor, never from the body.
+   *
+   * `type` is optional: a client that does not choose one gets DEFAULT_POST_TYPE,
+   * which is what keeps older clients working unchanged. A value outside the
+   * canonical set is rejected rather than quietly turned into a discussion, so a
+   * typo in a client cannot silently label content.
    */
   async createPost(communityId: string, input: CreatePostInput): Promise<Post> {
     const authorId = this.normalizeAuthorId(input.authorId);
@@ -79,7 +85,13 @@ export class PostService {
     });
   }
 
-  /** Lists the posts of a community, newest first, for active members only. */
+  /**
+   * Lists the posts of a community, newest first, for active members only.
+   *
+   * `query.type` filters the listing to one kind of content without changing the
+   * ordering or the pagination rules; the total it reports is the total of that
+   * filtered set, so the page count and the items stay consistent.
+   */
   async listCommunityPosts(
     communityId: string,
     actorId: string,
@@ -99,8 +111,9 @@ export class PostService {
       this.postRepository.listByCommunity(
         communityId,
         toPageWindow(page, limit),
+        query.type,
       ),
-      this.postRepository.countByCommunity(communityId),
+      this.postRepository.countByCommunity(communityId, query.type),
     ]);
 
     return toPaginated(items, page, limit, total);
@@ -216,23 +229,36 @@ export class PostService {
     return content;
   }
 
+  /**
+   * Resolves the optional post type.
+   *
+   * Absent, `null` or an empty string means "the client did not choose", which is
+   * the documented default rather than an error, so older clients keep working.
+   * Anything else has to be one of the canonical values, compared
+   * case-insensitively so `QUESTION` and `question` mean the same thing. An
+   * unknown value is a 400: guessing would label a student's content for them.
+   */
   private normalizeType(value: unknown): PostType {
     if (value === undefined || value === null) {
-      return POST_TYPES.TEXT;
+      return DEFAULT_POST_TYPE;
     }
 
     if (typeof value !== "string") {
       throw new Error(POST_TYPE_INVALID_MESSAGE);
     }
 
-    const type = value.trim().toLowerCase();
+    const candidate = value.trim().toLowerCase();
 
-    // Only TEXT exists in this version, so any other value is invalid input
-    // rather than a value the client is allowed to choose.
-    if (!POST_TYPE_VALUES.includes(type) || type !== POST_TYPES.TEXT) {
+    if (candidate.length === 0) {
+      return DEFAULT_POST_TYPE;
+    }
+
+    const type = POST_TYPE_VALUES.find((known) => known === candidate);
+
+    if (!type) {
       throw new Error(POST_TYPE_INVALID_MESSAGE);
     }
 
-    return POST_TYPES.TEXT;
+    return type;
   }
 }

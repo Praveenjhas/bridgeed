@@ -1,9 +1,6 @@
 export { USER_ROLES, type UserRole } from "./constants/roles";
 
-export {
-  USER_STATUSES,
-  type UserStatus,
-} from "./constants/user-statuses";
+export { USER_STATUSES, type UserStatus } from "./constants/user-statuses";
 
 export {
   type AuthenticatedUser,
@@ -21,11 +18,7 @@ export {
   type Connection,
 } from "./types/connection";
 
-export type {
-  User,
-  StudentProfile,
-  StudentProfileDetails,
-} from "./types/user";
+export type { User, StudentProfile, StudentProfileDetails } from "./types/user";
 
 export type { University } from "./types/university";
 
@@ -81,6 +74,10 @@ export {
 
 export {
   POST_TYPES,
+  POST_TYPE_VALUES,
+  POST_TYPE_LABELS,
+  POST_TYPE_DESCRIPTIONS,
+  DEFAULT_POST_TYPE,
   type PostType,
   type ContentAuthor,
   type Post,

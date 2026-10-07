@@ -2,6 +2,7 @@ import type { Request, Response } from "express";
 import {
   POST_AUTHOR_REQUIRED_MESSAGE,
   POST_CONTENT_INVALID_MESSAGE,
+  POST_TYPE_INVALID_MESSAGE,
   PostService,
 } from "../services/post.service";
 import { sendContentError } from "../utils/content-errors";
@@ -9,6 +10,7 @@ import {
   isNonEmptyString,
   readCurrentActorId,
   readPagination,
+  readPostType,
   readRouteParam,
 } from "../utils/request";
 
@@ -71,14 +73,25 @@ export class PostController {
       const pagination = readPagination(req);
 
       if (!pagination) {
-        res.status(400).json({ error: "page and limit must be positive integers" });
+        res
+          .status(400)
+          .json({ error: "page and limit must be positive integers" });
+        return;
+      }
+
+      // `?type=` is optional. An unknown value is refused instead of ignored, so
+      // a filter can never look applied while returning everything.
+      const type = readPostType(req);
+
+      if (type === null) {
+        res.status(400).json({ error: POST_TYPE_INVALID_MESSAGE });
         return;
       }
 
       const posts = await this.postService.listCommunityPosts(
         communityId,
         actorId,
-        pagination,
+        { ...pagination, type },
       );
 
       res.json(posts);

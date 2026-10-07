@@ -17,7 +17,9 @@ import {
   COMMUNITY_MEMBERSHIP_STATUSES,
   COMMUNITY_TYPES,
   POST_TYPES,
+  POST_TYPE_VALUES,
   REACTION_TYPES,
+  type PostType,
 } from "@bridgeed/shared";
 import { prisma } from "../src/config/prisma";
 import { REACTION_ALREADY_EXISTS_MESSAGE } from "../src/repositories/post-reaction.repository";
@@ -119,7 +121,11 @@ function expectStatus(
   );
 }
 
-function expectEqual(name: string, actual: unknown, expected: unknown): boolean {
+function expectEqual(
+  name: string,
+  actual: unknown,
+  expected: unknown,
+): boolean {
   return record(name, actual === expected, { expected, actual });
 }
 
@@ -141,7 +147,10 @@ function expectError(
     ok,
     ok
       ? undefined
-      : { expected: { status, message }, actual: { status: result.status, error } },
+      : {
+          expected: { status, message },
+          actual: { status: result.status, error },
+        },
   );
 }
 
@@ -153,9 +162,7 @@ async function api(
   const response = await fetch(`${API_BASE_URL}${API_PREFIX}${path}`, {
     method,
     headers:
-      body === undefined
-        ? undefined
-        : { "Content-Type": "application/json" },
+      body === undefined ? undefined : { "Content-Type": "application/json" },
     body: body === undefined ? undefined : JSON.stringify(body),
   });
 
@@ -283,7 +290,11 @@ async function createCommunity(
     createdById: ownerId,
   });
 
-  const id = await requireCreatedId(`setup: create community ${label}`, result, 201);
+  const id = await requireCreatedId(
+    `setup: create community ${label}`,
+    result,
+    201,
+  );
 
   context.communityIds.push(id);
 
@@ -342,7 +353,8 @@ async function seedMembership(
     status?: string;
   },
 ): Promise<void> {
-  const expectedRole = data.role === undefined ? undefined : toDatabaseRole(data.role);
+  const expectedRole =
+    data.role === undefined ? undefined : toDatabaseRole(data.role);
   const expectedStatus =
     data.status === undefined ? undefined : toDatabaseStatus(data.status);
 
@@ -502,17 +514,29 @@ async function setup(context: SmokeContext): Promise<SmokeFixture> {
       users.owner,
       privateId,
     ),
-    alice: await joinCommunity("alice requests private", privateId, users.alice),
-    grace: await joinCommunity("grace requests private", privateId, users.grace),
+    alice: await joinCommunity(
+      "alice requests private",
+      privateId,
+      users.alice,
+    ),
+    grace: await joinCommunity(
+      "grace requests private",
+      privateId,
+      users.grace,
+    ),
     hank: await joinCommunity("hank requests private", privateId, users.hank),
     ivan: await joinCommunity("ivan requests private", privateId, users.ivan),
   };
 
   const privateAlice = asRecord(
     (
-      await api("PATCH", `/community-memberships/${privateMemberships.alice}/approve`, {
-        actorId: users.owner,
-      })
+      await api(
+        "PATCH",
+        `/community-memberships/${privateMemberships.alice}/approve`,
+        {
+          actorId: users.owner,
+        },
+      )
     ).body,
   );
 
@@ -524,9 +548,13 @@ async function setup(context: SmokeContext): Promise<SmokeFixture> {
 
   const privateHank = asRecord(
     (
-      await api("PATCH", `/community-memberships/${privateMemberships.hank}/reject`, {
-        actorId: users.owner,
-      })
+      await api(
+        "PATCH",
+        `/community-memberships/${privateMemberships.hank}/reject`,
+        {
+          actorId: users.owner,
+        },
+      )
     ).body,
   );
 
@@ -595,9 +623,9 @@ async function runPostCreationChecks(
     "Owner announcement for the smoke run",
   );
   expectEqual(
-    "post: type is always text",
+    "post: the type defaults to discussion",
     readString(ownerPost.body, "type"),
-    POST_TYPES.TEXT,
+    POST_TYPES.DISCUSSION,
   );
   expectEqual(
     "post: post belongs to the target community",
@@ -627,22 +655,31 @@ async function runPostCreationChecks(
     !containsText(ownerPost.body, "@bridgeed-smoke.test"),
   );
 
-  const explicitTextType = await api("POST", postsPath, {
+  const explicitType = await api("POST", postsPath, {
     authorId: users.owner,
-    content: "Explicit text type is accepted",
-    type: POST_TYPES.TEXT,
+    content: "Explicit discussion type is accepted",
+    type: POST_TYPES.DISCUSSION,
   });
 
-  expectStatus("post: explicit text type is accepted", explicitTextType, 201);
+  expectStatus(
+    "post: an explicit discussion type is accepted",
+    explicitType,
+    201,
+  );
+  expectEqual(
+    "post: the explicit type is stored as sent",
+    readString(explicitType.body, "type"),
+    POST_TYPES.DISCUSSION,
+  );
 
-  const explicitTextTypeId = readString(explicitTextType.body, "id");
+  const explicitTypeId = readString(explicitType.body, "id");
 
-  if (explicitTextTypeId) {
-    context.postIds.push(explicitTextTypeId);
+  if (explicitTypeId) {
+    context.postIds.push(explicitTypeId);
   }
 
   expectError(
-    "post: unsupported post type is rejected",
+    "post: a post type outside the canonical set is rejected",
     await api("POST", postsPath, {
       authorId: users.owner,
       content: "Image posts do not exist yet",
@@ -651,6 +688,49 @@ async function runPostCreationChecks(
     400,
     POST_TYPE_INVALID_MESSAGE,
   );
+
+  expectError(
+    "post: a non string post type is rejected",
+    await api("POST", postsPath, {
+      authorId: users.owner,
+      content: "A number is not a type",
+      type: 42,
+    }),
+    400,
+    POST_TYPE_INVALID_MESSAGE,
+  );
+
+  expectError(
+    "post: a misspelled post type is rejected",
+    await api("POST", postsPath, {
+      authorId: users.owner,
+      content: "Close to a question, but not one",
+      type: "questioned",
+    }),
+    400,
+    POST_TYPE_INVALID_MESSAGE,
+  );
+
+  // An empty string is "the client did not choose", not an unknown type: it is
+  // the shape an uncontrolled form field produces.
+  const emptyType = await api("POST", postsPath, {
+    authorId: users.owner,
+    content: "An empty type falls back to the default",
+    type: "   ",
+  });
+
+  expectStatus("post: a blank post type falls back", emptyType, 201);
+  expectEqual(
+    "post: a blank post type becomes a discussion",
+    readString(emptyType.body, "type"),
+    POST_TYPES.DISCUSSION,
+  );
+
+  const emptyTypeId = readString(emptyType.body, "id");
+
+  if (emptyTypeId) {
+    context.postIds.push(emptyTypeId);
+  }
 
   const alicePost = await api("POST", postsPath, {
     authorId: users.alice,
@@ -1078,7 +1158,7 @@ async function runListingChecks(
   expectEqual(
     "listing: item exposes the post type",
     listedItem["type"],
-    POST_TYPES.TEXT,
+    POST_TYPES.DISCUSSION,
   );
   expectEqual("listing: item exposes deletedAt", listedItem["deletedAt"], null);
   expectTrue(
@@ -1115,6 +1195,320 @@ async function runListingChecks(
   );
 }
 
+/**
+ * Every type filter of one community's listing.
+ *
+ * A filter must narrow the same ordered listing rather than become a different
+ * one: the checks below compare the filtered ids with the unfiltered order, then
+ * page inside one type and refuse anything that is not a canonical value.
+ */
+async function runPostTypeFilterChecks(
+  postsPath: string,
+  users: SmokeUsers,
+  allIds: (string | null)[],
+  createdByType: Map<PostType, string>,
+): Promise<void> {
+  for (const type of POST_TYPE_VALUES) {
+    const filtered = await api(
+      "GET",
+      `${postsPath}?actorId=${users.alice}&type=${type}&limit=100`,
+    );
+
+    expectStatus(`type: the ${type} filter responds 200`, filtered, 200);
+
+    const items = readItems(filtered.body);
+    const filteredIds = items.map((item) => readString(item, "id"));
+    const createdId = createdByType.get(type);
+
+    expectTrue(
+      `type: the ${type} filter returns only ${type}`,
+      items.length > 0 &&
+        items.every((item) => readString(item, "type") === type),
+      items.map((item) => readString(item, "type")),
+    );
+    expectTrue(
+      `type: the ${type} filter includes the post of that type`,
+      createdId !== undefined && hasItemWithId(items, createdId),
+    );
+    // A filter narrows the same ordered listing: the matching posts keep their
+    // relative order instead of being re-sorted by the filter.
+    expectEqual(
+      `type: the ${type} filter preserves the listing order`,
+      filteredIds.join(","),
+      allIds.filter((id) => id !== null && filteredIds.includes(id)).join(","),
+    );
+    expectEqual(
+      `type: the ${type} filter reports its own total`,
+      readNumber(filtered.body, "total"),
+      items.length,
+    );
+  }
+
+  const questionPages: string[][] = [];
+
+  for (const page of [1, 2, 3]) {
+    const result = await api(
+      "GET",
+      `${postsPath}?actorId=${users.alice}&type=${POST_TYPES.QUESTION}&limit=1&page=${page}`,
+    );
+
+    expectStatus(`type: question page ${page} responds 200`, result, 200);
+    questionPages.push(
+      readItems(result.body).map((item) => readString(item, "id") ?? ""),
+    );
+
+    if (page === 1) {
+      expectEqual(
+        "type: a filtered page reports the filtered total",
+        readNumber(result.body, "total"),
+        3,
+      );
+      expectEqual(
+        "type: a filtered page reports the filtered page count",
+        readNumber(result.body, "totalPages"),
+        3,
+      );
+      expectEqual(
+        "type: a filtered page holds exactly one item",
+        readItems(result.body).length,
+        1,
+      );
+    }
+  }
+
+  const pagedQuestionIds = questionPages.flat();
+
+  expectEqual(
+    "type: filtered pages walk every question once",
+    new Set(pagedQuestionIds).size,
+    3,
+  );
+  expectTrue(
+    "type: a filtered page keeps the listing order",
+    pagedQuestionIds.join(",") ===
+      allIds
+        .filter((id) => id !== null && pagedQuestionIds.includes(id))
+        .join(","),
+    pagedQuestionIds,
+  );
+
+  const upperCaseFilter = await api(
+    "GET",
+    `${postsPath}?actorId=${users.alice}&type=${POST_TYPES.QUESTION.toUpperCase()}&limit=100`,
+  );
+
+  expectEqual(
+    "type: the filter is case insensitive",
+    readNumber(upperCaseFilter.body, "total"),
+    3,
+  );
+
+  expectError(
+    "type: an unknown filter is rejected",
+    await api("GET", `${postsPath}?actorId=${users.alice}&type=image`),
+    400,
+    POST_TYPE_INVALID_MESSAGE,
+  );
+  expectError(
+    "type: a repeated filter is rejected",
+    await api(
+      "GET",
+      `${postsPath}?actorId=${users.alice}&type=question&type=resource`,
+    ),
+    400,
+    POST_TYPE_INVALID_MESSAGE,
+  );
+  expectError(
+    "type: an empty filter is rejected",
+    await api("GET", `${postsPath}?actorId=${users.alice}&type=`),
+    400,
+    POST_TYPE_INVALID_MESSAGE,
+  );
+  expectError(
+    "type: pagination is still validated under a filter",
+    await api(
+      "GET",
+      `${postsPath}?actorId=${users.alice}&type=question&limit=0`,
+    ),
+    400,
+    HTTP_MESSAGES.invalidPagination,
+  );
+  expectError(
+    "type: a filtered listing is still members only",
+    await api("GET", `${postsPath}?actorId=${users.bob}&type=question`),
+    409,
+    NOT_ACTIVE_MEMBER_MESSAGE,
+  );
+  expectError(
+    "type: a filtered listing still needs an actor",
+    await api("GET", `${postsPath}?type=question`),
+    400,
+    HTTP_MESSAGES.actorIdRequired,
+  );
+  expectError(
+    "type: a non-member cannot create a typed post",
+    await api("POST", postsPath, {
+      authorId: users.bob,
+      content: "Bob is not a member here",
+      type: POST_TYPES.QUESTION,
+    }),
+    409,
+    NOT_ACTIVE_MEMBER_MESSAGE,
+  );
+}
+
+/**
+ * Structured academic content: the canonical post types, end to end.
+ *
+ * Everything runs in a community of its own, so the exact counts the listing
+ * checks assert on the fixture community are not disturbed. Each type is
+ * exercised the way a client uses it — created through the API, read back from
+ * the create response, the listing and the post detail, then filtered — and the
+ * posts that predate types are re-read to prove they are still ordinary
+ * discussions.
+ */
+async function runPostTypeChecks(
+  context: SmokeContext,
+  fixture: SmokeFixture,
+  posts: CreatedPosts,
+): Promise<void> {
+  console.log("\n--- post types ---");
+
+  const { users } = fixture;
+  const typeCommunityId = await createCommunity(
+    context,
+    "types",
+    users.owner,
+    COMMUNITY_TYPES.PUBLIC,
+  );
+
+  await joinCommunity(
+    "alice joins the type community",
+    typeCommunityId,
+    users.alice,
+  );
+
+  const postsPath = `/communities/${typeCommunityId}/posts`;
+  const createdByType = new Map<PostType, string>();
+
+  for (const type of POST_TYPE_VALUES) {
+    const created = await api("POST", postsPath, {
+      authorId: users.alice,
+      content: `A ${type} post for the smoke run`,
+      type,
+    });
+
+    const id = await requireCreatedId(
+      `type: a ${type} post is created`,
+      created,
+      201,
+    );
+
+    context.postIds.push(id);
+    createdByType.set(type, id);
+
+    expectEqual(
+      `type: the create response reports ${type}`,
+      readString(created.body, "type"),
+      type,
+    );
+    expectEqual(
+      `type: a ${type} post still belongs to its community`,
+      readString(created.body, "communityId"),
+      typeCommunityId,
+    );
+    expectEqual(
+      `type: a ${type} post still names its author`,
+      readString(created.body, "authorId"),
+      users.alice,
+    );
+  }
+
+  // Two extra questions, so a filtered listing is long enough to page.
+  for (const extra of ["second", "third"]) {
+    const created = await api("POST", postsPath, {
+      authorId: users.alice,
+      content: `A ${extra} question for the smoke run`,
+      type: POST_TYPES.QUESTION,
+    });
+
+    const id = await requireCreatedId(
+      `type: a ${extra} question is created`,
+      created,
+      201,
+    );
+
+    context.postIds.push(id);
+  }
+
+  const unfiltered = await api(
+    "GET",
+    `${postsPath}?actorId=${users.alice}&limit=100`,
+  );
+
+  expectStatus("type: the unfiltered listing responds 200", unfiltered, 200);
+
+  const unfilteredItems = readItems(unfiltered.body);
+  const allIds = unfilteredItems.map((item) => readString(item, "id"));
+  const createdCount = POST_TYPE_VALUES.length + 2;
+
+  expectEqual(
+    "type: every created post is listed",
+    allIds.length,
+    createdCount,
+  );
+  expectEqual(
+    "type: the listing counts every created post",
+    readNumber(unfiltered.body, "total"),
+    createdCount,
+  );
+  expectTrue(
+    "type: every listed item carries a canonical type",
+    unfilteredItems.every((item) =>
+      POST_TYPE_VALUES.includes(readString(item, "type") as PostType),
+    ),
+    unfilteredItems.map((item) => readString(item, "type")),
+  );
+  expectEqual(
+    "type: the listing holds all seven types",
+    new Set(unfilteredItems.map((item) => readString(item, "type"))).size,
+    POST_TYPE_VALUES.length,
+  );
+
+  await runPostTypeFilterChecks(postsPath, users, allIds, createdByType);
+
+  const questionId = createdByType.get(POST_TYPES.QUESTION);
+  const questionDetail = await api(
+    "GET",
+    `/posts/${questionId}?actorId=${users.alice}`,
+  );
+
+  expectStatus("type: the question detail responds 200", questionDetail, 200);
+  expectEqual(
+    "type: the detail exposes the post type",
+    readString(questionDetail.body, "type"),
+    POST_TYPES.QUESTION,
+  );
+
+  // A post written before types existed: it is still readable, and it reads as
+  // the default rather than as a missing value.
+  const legacyDetail = await api(
+    "GET",
+    `/posts/${posts.detailedPostId}?actorId=${users.alice}`,
+  );
+
+  expectStatus(
+    "type: a pre-existing post is still readable",
+    legacyDetail,
+    200,
+  );
+  expectEqual(
+    "type: a pre-existing post reads as a discussion",
+    readString(legacyDetail.body, "type"),
+    POST_TYPES.DISCUSSION,
+  );
+}
+
 async function runDetailsChecks(
   context: SmokeContext,
   fixture: SmokeFixture,
@@ -1139,9 +1533,9 @@ async function runDetailsChecks(
     "Alice detailed post for counts",
   );
   expectEqual(
-    "detail: type is text",
+    "detail: type is discussion",
     readString(detail.body, "type"),
-    POST_TYPES.TEXT,
+    POST_TYPES.DISCUSSION,
   );
   expectEqual(
     "detail: author id",
@@ -1170,11 +1564,7 @@ async function runDetailsChecks(
   const author = asRecord(asRecord(detail.body)["author"]);
 
   expectEqual("detail: author userId", author["userId"], users.alice);
-  expectEqual(
-    "detail: author name",
-    readString(author, "name"),
-    "Smoke alice",
-  );
+  expectEqual("detail: author name", readString(author, "name"), "Smoke alice");
   expectTrue(
     "detail: author username is returned",
     typeof readString(author, "username") === "string",
@@ -1308,7 +1698,7 @@ async function runEditChecks(
   expectEqual(
     "edit: type is not changed by an edit",
     readString(edited.body, "type"),
-    POST_TYPES.TEXT,
+    POST_TYPES.DISCUSSION,
   );
 
   const typeChangeAttempt = await api("PATCH", postPath, {
@@ -1317,11 +1707,15 @@ async function runEditChecks(
     type: "image",
   });
 
-  expectStatus("edit: content edit with a type field is accepted", typeChangeAttempt, 200);
+  expectStatus(
+    "edit: content edit with a type field is accepted",
+    typeChangeAttempt,
+    200,
+  );
   expectEqual(
-    "edit: post type stays text even when the client sends a type",
+    "edit: a post keeps its type even when the client sends a different one",
     readString(typeChangeAttempt.body, "type"),
-    POST_TYPES.TEXT,
+    POST_TYPES.DISCUSSION,
   );
 
   const reread = await api("GET", `${postPath}?actorId=${users.bob}`);
@@ -1432,9 +1826,9 @@ async function runEditChecks(
   );
 
   expectEqual(
-    "edit: the stored type is still text",
+    "edit: the stored type is still a discussion",
     readString(stillOriginal.body, "type"),
-    POST_TYPES.TEXT,
+    POST_TYPES.DISCUSSION,
   );
 }
 
@@ -1941,7 +2335,11 @@ async function runCommentChecks(
     `/comments/${aliceCommentId}?actorId=${users.bob}`,
   );
 
-  expectStatus("comment detail: active member can read a comment", commentDetail, 200);
+  expectStatus(
+    "comment detail: active member can read a comment",
+    commentDetail,
+    200,
+  );
   expectEqual(
     "comment detail: id",
     readString(commentDetail.body, "id"),
@@ -2019,6 +2417,11 @@ async function runCommentChecks(
     "comment detail: post summary never exposes the post content",
     !containsText(detailPost, "Alice detailed post for counts"),
   );
+  expectEqual(
+    "comment detail: post summary exposes the post type",
+    detailPost["type"],
+    POST_TYPES.DISCUSSION,
+  );
 
   expectError(
     "comment detail: pending membership cannot read a comment",
@@ -2060,10 +2463,7 @@ async function runCommentChecks(
     HTTP_MESSAGES.actorIdRequired,
   );
 
-  const postDetail = await api(
-    "GET",
-    `${postPath}?actorId=${users.bob}`,
-  );
+  const postDetail = await api("GET", `${postPath}?actorId=${users.bob}`);
 
   expectEqual(
     "comments: post detail commentCount reflects the created comments",
@@ -2441,11 +2841,7 @@ async function runPostReactionChecks(
 
   const reLiked = await api("POST", reactionsPath, { userId: users.alice });
 
-  expectStatus(
-    "reaction: a removed like can be created again",
-    reLiked,
-    201,
-  );
+  expectStatus("reaction: a removed like can be created again", reLiked, 201);
 
   const reLikedId = readString(reLiked.body, "id");
 
@@ -2528,15 +2924,17 @@ async function runPostReactionChecks(
     type: REACTION_TYPES.LIKE,
   });
 
-  expectStatus("reaction: an explicit like type is accepted", explicitType, 201);
+  expectStatus(
+    "reaction: an explicit like type is accepted",
+    explicitType,
+    201,
+  );
 
   expectError(
     "reaction: unknown post cannot be liked",
-    await api(
-      "POST",
-      "/posts/00000000-0000-4000-8000-000000000000/reactions",
-      { userId: users.alice },
-    ),
+    await api("POST", "/posts/00000000-0000-4000-8000-000000000000/reactions", {
+      userId: users.alice,
+    }),
     404,
     POST_NOT_FOUND_MESSAGE,
   );
@@ -2666,10 +3064,7 @@ async function runCommentReactionChecks(
     204,
   );
 
-  const afterUnlike = await api(
-    "GET",
-    `${commentPath}?actorId=${users.owner}`,
-  );
+  const afterUnlike = await api("GET", `${commentPath}?actorId=${users.owner}`);
 
   expectEqual(
     "comment reaction: likeCount decreases after an unlike",
@@ -3069,7 +3464,11 @@ async function runRegressionChecks(
   const health = await api("GET", "/health");
 
   expectStatus("regression: health endpoint responds", health, 200);
-  expectEqual("regression: health reports ok", readString(health.body, "status"), "ok");
+  expectEqual(
+    "regression: health reports ok",
+    readString(health.body, "status"),
+    "ok",
+  );
 
   const user = await api("GET", `/users/${fixture.users.owner}`);
 
@@ -3085,10 +3484,7 @@ async function runRegressionChecks(
     404,
   );
 
-  const profile = await api(
-    "GET",
-    `/student-profiles/${fixture.users.alice}`,
-  );
+  const profile = await api("GET", `/student-profiles/${fixture.users.alice}`);
 
   expectStatus("regression: get student profile", profile, 200);
   expectEqual(
@@ -3125,7 +3521,11 @@ async function runRegressionChecks(
   const skill = await api("POST", "/skills", {
     name: `Smoke Skill ${RUN_ID}`,
   });
-  const skillId = await requireCreatedId("regression: create skill", skill, 201);
+  const skillId = await requireCreatedId(
+    "regression: create skill",
+    skill,
+    201,
+  );
   context.skillIds.push(skillId);
   expectStatus("regression: list skills", await api("GET", "/skills"), 200);
   expectStatus(
@@ -3135,7 +3535,10 @@ async function runRegressionChecks(
   );
   expectStatus(
     "regression: add skill to student",
-    await api("POST", `/student-profiles/${fixture.users.alice}/skills/${skillId}`),
+    await api(
+      "POST",
+      `/student-profiles/${fixture.users.alice}/skills/${skillId}`,
+    ),
     201,
   );
 
@@ -3151,7 +3554,10 @@ async function runRegressionChecks(
   );
   expectStatus(
     "regression: remove skill from student",
-    await api("DELETE", `/student-profiles/${fixture.users.alice}/skills/${skillId}`),
+    await api(
+      "DELETE",
+      `/student-profiles/${fixture.users.alice}/skills/${skillId}`,
+    ),
     204,
   );
 
@@ -3329,10 +3735,7 @@ async function runRegressionChecks(
   );
   expectStatus(
     "regression: list student communities",
-    await api(
-      "GET",
-      `/student-profiles/${fixture.users.alice}/communities`,
-    ),
+    await api("GET", `/student-profiles/${fixture.users.alice}/communities`),
     200,
   );
   expectError(
@@ -3488,10 +3891,7 @@ async function auditCleanup(
   });
   const leftoverMemberships = await prisma.communityMembership.count({
     where: {
-      OR: [
-        { communityId: { in: communityIds } },
-        { userId: { in: userIds } },
-      ],
+      OR: [{ communityId: { in: communityIds } }, { userId: { in: userIds } }],
     },
   });
   const leftoverPosts = await prisma.post.count({
@@ -3550,7 +3950,11 @@ async function auditCleanup(
     leftoverCommentReactions,
     0,
   );
-  expectEqual("audit: leftover test users by email prefix", leftoverUsersByEmail, 0);
+  expectEqual(
+    "audit: leftover test users by email prefix",
+    leftoverUsersByEmail,
+    0,
+  );
   expectEqual(
     "audit: leftover test communities by slug prefix",
     leftoverCommunitiesBySlug,
@@ -3624,6 +4028,7 @@ async function main(): Promise<void> {
     await runDetailsChecks(context, fixture, posts);
     await runEditChecks(fixture, posts);
     await runDeleteChecks(fixture, posts);
+    await runPostTypeChecks(context, fixture, posts);
 
     const comments = await runCommentChecks(context, fixture, posts);
 

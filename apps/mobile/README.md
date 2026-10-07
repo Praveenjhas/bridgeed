@@ -5,7 +5,9 @@ foundation: the navigation shell, the design system, the API layer, real mobile
 **Authentication** built on a persisted session, four features — the ranked
 **Feed** with post detail, comments and likes, **Communities** with membership,
 rosters and community posts, and **Connections** with requests, blocks and
-student profiles — and **Global search** over the academic graph.
+student profiles — and **Global search** over the academic graph. Posts are
+**structured academic content**: every one is a discussion, question, resource,
+achievement, research note, announcement or opportunity.
 
 ## Stack
 
@@ -271,6 +273,7 @@ nothing — and this is a documented v1 boundary rather than an unfinished featu
 | Feed                 | Real data from `GET /api/v1/feed`: cursor pagination, pull to refresh, skeletons, empty and error states, per item ranking reasons, and a summary built from `generatedAt` / `candidatesConsidered`                                           |
 | Likes                | Optimistic like and unlike through `POST` / `DELETE /api/v1/posts/:postId/reactions`, with rollback and an inline error                                                                                                                       |
 | Post detail          | `GET /api/v1/posts/:postId`, the comment thread from `GET /api/v1/posts/:postId/comments` with load-more, and posting through `POST /api/v1/posts/:postId/comments`                                                                           |
+| Structured posts     | Seven canonical post types (`discussion`, `question`, `resource`, `achievement`, `research`, `announcement`, `opportunity`) chosen in the composer, labelled on every card and on the post screen, and filterable in a community from `GET …/posts?type=` |
 | Communities          | The directory from `GET /api/v1/communities` (paged, searchable over what is loaded), the reader's own memberships from `GET /api/v1/student-profiles/:userId/communities`, and clear membership badges and CTAs                              |
 | Community detail     | `GET /api/v1/communities/:communityId`, join and leave through `POST …/join` and `DELETE …/membership`, the roster from `GET …/members` and the posts from `GET …/posts` with a composer writing to `POST …/posts`                            |
 | Join requests        | Owners and admins see pending requests on the member list and decide them with `PATCH /api/v1/community-memberships/:membershipId/approve` and `/reject`                                                                                      |
@@ -294,11 +297,21 @@ as a number for the same reason: the community listing does not report the
 reader's reaction, and only the feed does. Blocking is offered only where a
 connection row already exists, because that row is what the block acts on.
 
+Post types structure what a post is; they do not add anything behind it. There is
+no answer entity with an accepted answer, no resource model, no file or PDF
+upload, no research paper metadata and no bookmarking, and creating an
+announcement grants no extra authority — publishing on behalf of a university or
+a club is a later phase. The feed deliberately has no type filter either: it is
+ranked and cursor paged, and narrowing it would mean a second ranking path rather
+than a parameter, so the type is shown on every item and the filter lives where
+the listing is a plain newest-first page.
+
 Search v1 stops where the data does. It matches text rather than meaning: no
 typos, no stemming ("teaching" does not find "teacher") and no accent folding. A
 subject has no detail screen, so a subject result cannot be opened, and there is
-no question, resource, research or event category because those tables do not
-exist yet — an empty section would be a promise the product cannot keep.
+no post, question or resource category: search covers the academic graph, and
+searching the content itself arrives when the content model is richer than one
+text field — an empty section would be a promise the product cannot keep.
 
 ## Checks
 

@@ -4,7 +4,9 @@ import type {
   CommentListItem,
   PageWindow,
 } from "@bridgeed/shared";
+import type { PostType as PostTypeRecord } from "../generated/prisma/enums";
 import { prisma } from "../config/prisma";
+import { toPostType } from "./post.repository";
 
 /** Only public profile columns are selected for content authors. */
 const authorColumns = {
@@ -29,6 +31,7 @@ const postSummaryColumns = {
   id: true,
   communityId: true,
   authorId: true,
+  type: true,
 } as const;
 
 interface AuthorRecord {
@@ -52,6 +55,7 @@ interface PostSummaryRecord {
   id: string;
   communityId: string;
   authorId: string;
+  type: PostTypeRecord;
 }
 
 /**
@@ -97,6 +101,7 @@ function toPostSummary(record: PostSummaryRecord): CommentDetails["post"] {
     id: record.id,
     communityId: record.communityId,
     authorId: record.authorId,
+    type: toPostType(record.type),
   };
 }
 

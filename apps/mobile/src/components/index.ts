@@ -34,6 +34,12 @@ export { IconButton, type IconButtonProps } from "./IconButton";
 export { InlineError, type InlineErrorProps } from "./InlineError";
 export { LoadingState, type LoadingStateProps } from "./LoadingState";
 export { PageHeader, type PageHeaderProps } from "./PageHeader";
+export { PostTypeLabel, type PostTypeLabelProps } from "./PostTypeLabel";
+export {
+  PostTypeSelector,
+  type PostTypeSelectorProps,
+  type PostTypeSelectorVariant,
+} from "./PostTypeSelector";
 export { ProgramRow, type ProgramRowProps } from "./ProgramRow";
 export { Screen, type ScreenProps } from "./Screen";
 export { SearchField, type SearchFieldProps } from "./SearchField";

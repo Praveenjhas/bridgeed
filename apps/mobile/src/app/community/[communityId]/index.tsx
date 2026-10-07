@@ -1,10 +1,12 @@
-import { useCallback, useRef } from "react";
+import { useCallback, useRef, useState } from "react";
 import { FlatList, RefreshControl, StyleSheet, View } from "react-native";
 import { Stack, router, useLocalSearchParams } from "expo-router";
 import {
   COMMUNITY_MEMBERSHIP_STATUSES,
   COMMUNITY_TYPES,
+  POST_TYPE_LABELS,
   type PostListItem,
+  type PostType,
 } from "@bridgeed/shared";
 import {
   AppText,
@@ -13,6 +15,7 @@ import {
   EmptyState,
   ErrorState,
   LoadingState,
+  PostTypeSelector,
   Screen,
   SectionHeading,
   SkeletonList,
@@ -71,7 +74,8 @@ export default function CommunityDetailScreen() {
     enabled: canSeeMembers,
     pageSize: MEMBERS_PREVIEW_LIMIT,
   });
-  const posts = useCommunityPosts(communityId, actorId, isMember);
+  const [typeFilter, setTypeFilter] = useState<PostType | null>(null);
+  const posts = useCommunityPosts(communityId, actorId, isMember, typeFilter);
   const listRef = useRef<FlatList<PostListItem>>(null);
 
   const { refresh: refreshCommunity } = community;
@@ -115,8 +119,8 @@ export default function CommunityDetailScreen() {
   }, []);
 
   const handleSubmitPost = useCallback(
-    async (content: string) => {
-      const created = await submit(content);
+    async (content: string, type: PostType) => {
+      const created = await submit(content, type);
 
       // The list is refreshed from the API by `submit`, so scrolling to the top
       // is what makes the new post visible straight away.
@@ -293,6 +297,16 @@ export default function CommunityDetailScreen() {
       );
     }
 
+    if (typeFilter !== null) {
+      return (
+        <EmptyState
+          icon="newspaper-outline"
+          title={`No ${POST_TYPE_LABELS[typeFilter].toLowerCase()} posts yet`}
+          message={`Nothing of this kind has been posted in ${detail.name}. Choose All to see everything.`}
+        />
+      );
+    }
+
     return (
       <EmptyState
         icon="newspaper-outline"
@@ -389,11 +403,27 @@ export default function CommunityDetailScreen() {
         hint={
           isMember
             ? posts.total !== null
-              ? `${formatPostCount(posts.total)} · newest first`
+              ? `${formatPostCount(posts.total)}${
+                  typeFilter
+                    ? ` · ${POST_TYPE_LABELS[typeFilter].toLowerCase()}`
+                    : ""
+                } · newest first`
               : "Newest first"
             : "Members only"
         }
       />
+      {/* A filter, not a second list: the same ordered posts, narrowed to one
+          kind, so a reader looking for a resource does not scroll past every
+          question in the community. */}
+      {isMember ? (
+        <PostTypeSelector
+          variant="chips"
+          label="Show"
+          value={typeFilter}
+          onChange={setTypeFilter}
+          onClear={() => setTypeFilter(null)}
+        />
+      ) : null}
     </View>
   );
 

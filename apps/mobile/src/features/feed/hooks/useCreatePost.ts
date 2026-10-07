@@ -1,7 +1,9 @@
 import { useCallback, useState } from "react";
 import {
   COMMUNITY_MEMBERSHIP_STATUSES,
+  DEFAULT_POST_TYPE,
   type CommunityMembershipWithCommunity,
+  type PostType,
 } from "@bridgeed/shared";
 import {
   createCommunityPost,
@@ -20,6 +22,9 @@ export interface CreatePostState {
   /** Chosen community id, or null when the writer has none to post to. */
   selectedCommunityId: string | null;
   selectCommunity: (communityId: string) => void;
+  /** What is being shared, chosen before the body is written. */
+  type: PostType;
+  selectType: (type: PostType) => void;
   content: string;
   setContent: (value: string) => void;
   /** True while the create request is in flight. */
@@ -42,7 +47,11 @@ export interface CreatePostState {
  * one of the communities they are an active member of; the selection defaults to
  * the first one so a student in a single community never has to choose. The
  * author is never part of the request — the API takes it from the bearer token —
- * so the body carries only the content.
+ * so the body carries only the content and the chosen type.
+ *
+ * The type defaults to a discussion, which is what the API stores when a client
+ * sends none. It is kept after a successful post: writing two questions in a row
+ * is the common case, and re-choosing the same type every time would be noise.
  *
  * On success it empties the draft and asks the feed to reload, which is what
  * makes the new post appear without the feed having to refresh on every focus.
@@ -55,6 +64,7 @@ export function useCreatePost(
   );
 
   const [chosenId, setChosenId] = useState<string | null>(null);
+  const [type, setType] = useState<PostType>(DEFAULT_POST_TYPE);
   const [content, setContent] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitErrorMessage, setSubmitErrorMessage] = useState<string | null>(
@@ -107,6 +117,7 @@ export function useCreatePost(
       await createCommunityPost({
         communityId: selectedCommunityId,
         content: trimmed,
+        type,
       });
       setContent("");
       notifyFeedRefresh();
@@ -117,12 +128,14 @@ export function useCreatePost(
     } finally {
       setIsSubmitting(false);
     }
-  }, [content, selectedCommunityId]);
+  }, [content, selectedCommunityId, type]);
 
   return {
     targets,
     selectedCommunityId,
     selectCommunity: setChosenId,
+    type,
+    selectType: setType,
     content,
     setContent,
     isSubmitting,

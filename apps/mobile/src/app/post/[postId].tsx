@@ -11,6 +11,7 @@ import {
   ErrorState,
   InlineError,
   LoadingState,
+  PostTypeLabel,
   Screen,
   SectionHeading,
 } from "@/components";
@@ -30,6 +31,7 @@ function PostBody({ post }: { post: PostDetails }) {
 
   return (
     <View style={{ gap: spacing.md, paddingBottom: spacing.sm }}>
+      <PostTypeLabel type={post.type} />
       <View
         style={{
           flexDirection: "row",
