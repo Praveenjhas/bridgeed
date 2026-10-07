@@ -52,3 +52,11 @@ export {
   type UniversityStepProps,
 } from "./components/UniversityStep";
 export type { OnboardingStepProps } from "./components/stepProps";
+
+/**
+ * The two pickers are generic — a one-of-many list and a many-of-many chip grid
+ * — so the profile editor reuses them rather than growing a second set of
+ * controls that would drift from these.
+ */
+export { OptionList, type OptionListProps } from "./components/OptionList";
+export { TagPicker, type TagPickerProps } from "./components/TagPicker";

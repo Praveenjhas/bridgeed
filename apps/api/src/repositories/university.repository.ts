@@ -9,6 +9,35 @@ const MAXIMUM_SLUG_LENGTH = 80;
 const MAXIMUM_SLUG_ATTEMPTS = 20;
 
 /**
+ * Maps a stored university row onto the shared `University` shape.
+ *
+ * It is exported so any repository that reads a university as part of a larger
+ * document (a student profile, for instance) can hand back the same shape
+ * without copying the field list.
+ */
+export function toUniversity(university: {
+  id: string;
+  name: string;
+  country: string;
+  state: string | null;
+  city: string | null;
+  websiteUrl: string | null;
+  verified: boolean;
+  createdAt: Date;
+}): University {
+  return {
+    id: university.id,
+    name: university.name,
+    country: university.country,
+    state: university.state,
+    city: university.city,
+    websiteUrl: university.websiteUrl,
+    verified: university.verified,
+    createdAt: university.createdAt.toISOString(),
+  };
+}
+
+/**
  * Turns a university name into the URL-safe identifier stored in `slug`:
  * accents folded away, lowercased, and every run of other characters collapsed
  * into a single dash.
@@ -47,25 +76,6 @@ export class UniversityRepository {
     return `${base}-${randomUUID().slice(0, 8)}`;
   }
 
-  private toUniversity(
-    university: Awaited<ReturnType<typeof prisma.university.findUnique>>,
-  ): University | null {
-    if (!university) {
-      return null;
-    }
-
-    return {
-      id: university.id,
-      name: university.name,
-      country: university.country,
-      state: university.state,
-      city: university.city,
-      websiteUrl: university.websiteUrl,
-      verified: university.verified,
-      createdAt: university.createdAt.toISOString(),
-    };
-  }
-
   async findById(id: string): Promise<University | null> {
     const university = await prisma.university.findUnique({
       where: {
@@ -73,7 +83,7 @@ export class UniversityRepository {
       },
     });
 
-    return this.toUniversity(university);
+    return university ? toUniversity(university) : null;
   }
 
   async findByName(name: string): Promise<University | null> {
@@ -86,7 +96,7 @@ export class UniversityRepository {
       },
     });
 
-    return this.toUniversity(university);
+    return university ? toUniversity(university) : null;
   }
 
   async create(university: University): Promise<University> {
@@ -106,7 +116,7 @@ export class UniversityRepository {
       },
     });
 
-    return this.toUniversity(createdUniversity)!;
+    return toUniversity(createdUniversity);
   }
 
   async findAll(): Promise<University[]> {

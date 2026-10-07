@@ -21,7 +21,11 @@ export {
   type Connection,
 } from "./types/connection";
 
-export type { User, StudentProfile } from "./types/user";
+export type {
+  User,
+  StudentProfile,
+  StudentProfileDetails,
+} from "./types/user";
 
 export type { University } from "./types/university";
 

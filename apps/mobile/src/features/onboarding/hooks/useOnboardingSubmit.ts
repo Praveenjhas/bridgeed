@@ -1,5 +1,5 @@
 import { useCallback, useState } from "react";
-import type { StudentProfile } from "@bridgeed/shared";
+import type { StudentProfile, StudentProfileDetails } from "@bridgeed/shared";
 import {
   attachStudentInterest,
   attachStudentSkill,
@@ -83,7 +83,7 @@ export function useOnboardingSubmit(): OnboardingSubmitState {
 
         await attachTags(profile, skillIds, interestIds);
 
-        applyProfile(profile);
+        applyProfile(await readProfileDetails(profile));
 
         return { kind: "created" };
       } catch (error) {
@@ -186,4 +186,29 @@ async function attachIgnoringDuplicate(
       throw error;
     }
   }
+}
+
+/**
+ * Publishes the finished profile to the rest of the app.
+ *
+ * The created profile on its own carries no university or tags, and the tags
+ * were written one call after the create, so the whole document is read back.
+ * If that read fails the student still enters the app — the profile exists — and
+ * the profile screen can refresh it, which is better than leaving them on Review
+ * after a save that actually worked.
+ */
+async function readProfileDetails(
+  created: StudentProfile,
+): Promise<StudentProfileDetails> {
+  try {
+    const details = await fetchMyStudentProfile();
+
+    if (details !== null) {
+      return details;
+    }
+  } catch {
+    // Fall through to the minimal document below.
+  }
+
+  return { ...created, university: null, skills: [], interests: [] };
 }

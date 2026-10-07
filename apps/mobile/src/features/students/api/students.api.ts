@@ -2,6 +2,7 @@ import type {
   Interest,
   Skill,
   StudentProfile,
+  StudentProfileDetails,
   University,
 } from "@bridgeed/shared";
 import { apiClient, ApiError } from "@/services/api";
@@ -96,12 +97,16 @@ export interface FetchMyStudentProfileParams {
  * it: the route guard has to tell "nobody has set this account up" apart from
  * "the API could not answer", and only a null-versus-throw difference carries
  * that. Every other failure still throws.
+ *
+ * The response is the whole document — the profile plus the university it names
+ * and the skills and interests attached to it — so the profile screen needs one
+ * call rather than four.
  */
 export async function fetchMyStudentProfile({
   signal,
-}: FetchMyStudentProfileParams = {}): Promise<StudentProfile | null> {
+}: FetchMyStudentProfileParams = {}): Promise<StudentProfileDetails | null> {
   try {
-    return await apiClient.get<StudentProfile>("/student-profiles/me", {
+    return await apiClient.get<StudentProfileDetails>("/student-profiles/me", {
       signal,
     });
   } catch (error) {
@@ -213,4 +218,74 @@ export async function attachStudentInterest({
     `/student-profiles/${encodeURIComponent(userId)}/interests/${encodeURIComponent(interestId)}`,
     { signal },
   );
+}
+
+/** The editable fields of the signed-in student's own profile. */
+export interface UpdateMyStudentProfileInput {
+  name?: string;
+  bio?: string | null;
+  universityId?: string | null;
+  degree?: string | null;
+  branch?: string | null;
+  graduationYear?: number | null;
+  location?: string | null;
+}
+
+export interface UpdateMyStudentProfileParams {
+  input: UpdateMyStudentProfileInput;
+  signal?: AbortSignal;
+}
+
+/**
+ * Updates the signed-in student's own profile.
+ *
+ * There is no owner in the body on purpose: the API edits whichever account the
+ * bearer token belongs to, so this call cannot reach anybody else's profile. The
+ * response is the refreshed document, which the provider publishes so every
+ * screen sees the change without a second read.
+ */
+export async function updateMyStudentProfile({
+  input,
+  signal,
+}: UpdateMyStudentProfileParams): Promise<StudentProfileDetails> {
+  return apiClient.patch<StudentProfileDetails>("/student-profiles/me", {
+    body: input,
+    signal,
+  });
+}
+
+export interface ReplaceMySkillsParams {
+  skillIds: string[];
+  signal?: AbortSignal;
+}
+
+/**
+ * Makes `skillIds` the complete set of skills on the signed-in student's
+ * profile, and returns the set as it now stands. The owner is taken from the
+ * token, so the body carries only the ids.
+ */
+export async function replaceMyStudentSkills({
+  skillIds,
+  signal,
+}: ReplaceMySkillsParams): Promise<Skill[]> {
+  return apiClient.put<Skill[]>("/student-profiles/me/skills", {
+    body: { skillIds },
+    signal,
+  });
+}
+
+export interface ReplaceMyInterestsParams {
+  interestIds: string[];
+  signal?: AbortSignal;
+}
+
+/** Makes `interestIds` the complete set of interests. See the skills variant. */
+export async function replaceMyStudentInterests({
+  interestIds,
+  signal,
+}: ReplaceMyInterestsParams): Promise<Interest[]> {
+  return apiClient.put<Interest[]>("/student-profiles/me/interests", {
+    body: { interestIds },
+    signal,
+  });
 }

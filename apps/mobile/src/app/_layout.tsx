@@ -145,6 +145,10 @@ function RootNavigator() {
           name="student/[studentId]"
           options={{ ...detailScreenOptions, title: "Student" }}
         />
+        <Stack.Screen
+          name="profile/edit"
+          options={{ ...detailScreenOptions, title: "Edit profile" }}
+        />
       </Stack.Protected>
 
       {/*

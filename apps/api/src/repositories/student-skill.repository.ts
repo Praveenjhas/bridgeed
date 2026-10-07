@@ -53,4 +53,24 @@ export class StudentSkillRepository {
 
     return result.count;
   }
+
+  /**
+   * Makes `skillIds` the complete set of skills on a profile.
+   *
+   * The delete and the inserts run in one transaction, so a failure halfway
+   * through cannot leave a profile with its old skills removed and its new ones
+   * missing. The caller has already checked that every id exists, so the only
+   * way this throws is a genuine write failure.
+   */
+  async setSkillsForStudent(
+    studentId: string,
+    skillIds: string[],
+  ): Promise<void> {
+    await prisma.$transaction([
+      prisma.studentSkill.deleteMany({ where: { studentId } }),
+      ...skillIds.map((skillId) =>
+        prisma.studentSkill.create({ data: { studentId, skillId } }),
+      ),
+    ]);
+  }
 }

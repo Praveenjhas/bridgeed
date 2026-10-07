@@ -55,6 +55,31 @@ export class StudentSkillService {
     return this.studentSkillRepository.findSkillsByStudentId(userId);
   }
 
+  /**
+   * Replaces a student's skills with exactly `skillIds`.
+   *
+   * The profile has to exist (the join rows point at it) and every id has to be
+   * a real skill, so a malformed request is refused before anything is written.
+   * The set is de-duplicated because a chip picked twice is still one skill.
+   */
+  async setStudentSkills(userId: string, skillIds: string[]): Promise<Skill[]> {
+    await this.ensureStudentProfileExists(userId);
+
+    const uniqueIds = [...new Set(skillIds)];
+
+    if (uniqueIds.length > 0) {
+      const knownSkills = await this.skillRepository.findManyByIds(uniqueIds);
+
+      if (knownSkills.length !== uniqueIds.length) {
+        throw new Error("One or more skills do not exist");
+      }
+    }
+
+    await this.studentSkillRepository.setSkillsForStudent(userId, uniqueIds);
+
+    return this.studentSkillRepository.findSkillsByStudentId(userId);
+  }
+
   private async ensureStudentProfileExists(userId: string): Promise<void> {
     const profile = await this.studentProfileRepository.findByUserId(userId);
 

@@ -6,7 +6,7 @@ const API_PATH_PREFIX = "/api/v1";
 /** Requests are aborted after this long, so a dead server cannot hang the UI. */
 const DEFAULT_TIMEOUT_MS = 15_000;
 
-export type HttpMethod = "GET" | "POST" | "PATCH" | "DELETE";
+export type HttpMethod = "GET" | "POST" | "PATCH" | "PUT" | "DELETE";
 
 /** Query values accepted by the client; nullish entries are dropped. */
 export type QueryValue = string | number | boolean | null | undefined;
@@ -347,6 +347,8 @@ export const apiClient = {
     request<TResponse>("POST", path, options),
   patch: <TResponse>(path: string, options?: RequestOptions) =>
     request<TResponse>("PATCH", path, options),
+  put: <TResponse>(path: string, options?: RequestOptions) =>
+    request<TResponse>("PUT", path, options),
   remove: <TResponse>(path: string, options?: RequestOptions) =>
     request<TResponse>("DELETE", path, options),
 };

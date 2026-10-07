@@ -58,6 +58,35 @@ export class StudentInterestService {
     return this.studentInterestRepository.findInterestsByStudentId(userId);
   }
 
+  /**
+   * Replaces a student's interests with exactly `interestIds`. See
+   * `StudentSkillService.setStudentSkills` for the validation and the reasoning.
+   */
+  async setStudentInterests(
+    userId: string,
+    interestIds: string[],
+  ): Promise<Interest[]> {
+    await this.ensureStudentProfileExists(userId);
+
+    const uniqueIds = [...new Set(interestIds)];
+
+    if (uniqueIds.length > 0) {
+      const knownInterests =
+        await this.interestRepository.findManyByIds(uniqueIds);
+
+      if (knownInterests.length !== uniqueIds.length) {
+        throw new Error("One or more interests do not exist");
+      }
+    }
+
+    await this.studentInterestRepository.setInterestsForStudent(
+      userId,
+      uniqueIds,
+    );
+
+    return this.studentInterestRepository.findInterestsByStudentId(userId);
+  }
+
   private async ensureStudentProfileExists(userId: string): Promise<void> {
     const profile = await this.studentProfileRepository.findByUserId(userId);
 

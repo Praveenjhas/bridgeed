@@ -57,4 +57,19 @@ export class InterestRepository {
 
     return interests.map(toInterest);
   }
+
+  /** Every interest whose id is in `ids`; see `SkillRepository.findManyByIds`. */
+  async findManyByIds(ids: string[]): Promise<Interest[]> {
+    if (ids.length === 0) {
+      return [];
+    }
+
+    const interests = await prisma.interest.findMany({
+      where: {
+        id: { in: ids },
+      },
+    });
+
+    return interests.map(toInterest);
+  }
 }

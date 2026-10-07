@@ -53,4 +53,20 @@ export class StudentInterestRepository {
 
     return result.count;
   }
+
+  /**
+   * Makes `interestIds` the complete set of interests on a profile. See
+   * `StudentSkillRepository.setSkillsForStudent` for why it is one transaction.
+   */
+  async setInterestsForStudent(
+    studentId: string,
+    interestIds: string[],
+  ): Promise<void> {
+    await prisma.$transaction([
+      prisma.studentInterest.deleteMany({ where: { studentId } }),
+      ...interestIds.map((interestId) =>
+        prisma.studentInterest.create({ data: { studentId, interestId } }),
+      ),
+    ]);
+  }
 }

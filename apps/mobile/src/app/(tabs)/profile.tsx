@@ -1,38 +1,51 @@
-import { useState } from "react";
-import { ScrollView, View } from "react-native";
+import { useMemo, useState } from "react";
+import { RefreshControl, ScrollView, StyleSheet, View } from "react-native";
+import { router } from "expo-router";
 import {
   AppText,
   Button,
   Card,
   Divider,
   EmptyState,
+  ErrorState,
+  Icon,
   InlineError,
+  LoadingState,
   PageHeader,
   Screen,
+  SectionHeading,
+  type IconName,
 } from "@/components";
-import { resolveApiBaseUrl } from "@/config/env";
-import { useActor, useAuth } from "@/providers/AuthProvider";
+import {
+  formatCourse,
+  formatGraduationYear,
+  StudentIdentity,
+  TagList,
+} from "@/features/students";
+import { useAuth } from "@/providers/AuthProvider";
+import { useStudentProfileStatus } from "@/providers/StudentProfileProvider";
 import { useTheme } from "@/theme";
 import { toUserMessage } from "@/utils/errors";
 
-interface ConfigRowProps {
+interface FactProps {
+  icon: IconName;
   label: string;
   value: string;
-  hint: string;
 }
 
-function ConfigRow({ label, value, hint }: ConfigRowProps) {
-  const { spacing } = useTheme();
+/** One recorded detail of the profile, rendered only when the API actually has it. */
+function Fact({ icon, label, value }: FactProps) {
+  const { layout, spacing } = useTheme();
 
   return (
-    <View style={{ gap: spacing.xxs }}>
-      <AppText variant="overline" tone="muted">
-        {label}
-      </AppText>
-      <AppText variant="bodyStrong">{value}</AppText>
-      <AppText variant="caption" tone="secondary">
-        {hint}
-      </AppText>
+    <View style={[styles.row, { gap: spacing.md, alignItems: "flex-start" }]}>
+      <Icon name={icon} size={layout.icon.md} tone="textMuted" />
+      <View style={{ flex: 1, gap: spacing.xxs }}>
+        <AppText variant="overline" tone="muted">
+          {label}
+        </AppText>
+        <AppText variant="bodyStrong">{value}</AppText>
+      </View>
     </View>
   );
 }
@@ -40,92 +53,269 @@ function ConfigRow({ label, value, hint }: ConfigRowProps) {
 /**
  * Profile tab.
  *
- * It reports who the app is signed in as, which student's content it is ranking,
- * and which API it is talking to. Those three values explain almost every "why is
- * my feed empty" question, and they are resolved from the same helpers the API
- * client uses, so what is shown is what is used.
+ * It shows the signed-in student's own profile — name, university, course,
+ * graduation, bio, skills and interests — from the one document the app already
+ * holds, so there is no second read and no chance of the tab and the editor
+ * disagreeing. Every section renders honestly when it is empty: a profile
+ * without a bio says so rather than showing a blank space.
  *
  * Signing out lives here rather than in a settings screen because it is the one
  * account action the app currently has.
  */
 export default function ProfileScreen() {
-  const { spacing } = useTheme();
+  const { colors, layout, spacing } = useTheme();
   const { user, logout } = useAuth();
-  const actor = useActor();
-  const api = resolveApiBaseUrl();
+  const { status, profile, errorMessage, refresh } = useStudentProfileStatus();
   const [isSigningOut, setIsSigningOut] = useState(false);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [signOutError, setSignOutError] = useState<string | null>(null);
+
+  // The provider keeps the profile it has while it re-reads, so a refresh is
+  // "loading with something on screen" rather than an empty screen.
+  const isRefreshing = status === "loading" && profile !== null;
 
   async function handleSignOut() {
     setIsSigningOut(true);
-    setErrorMessage(null);
+    setSignOutError(null);
 
     try {
       await logout();
-      // On success the root guard swaps this screen for sign-in, so the state
-      // above is never seen again.
     } catch (error) {
-      setErrorMessage(toUserMessage(error));
+      setSignOutError(toUserMessage(error));
       setIsSigningOut(false);
     }
   }
 
+  const facts = useMemo(() => {
+    if (!profile) {
+      return [];
+    }
+
+    const entries: {
+      key: string;
+      icon: IconName;
+      label: string;
+      value: string;
+    }[] = [];
+
+    if (profile.university) {
+      entries.push({
+        key: "university",
+        icon: "school-outline",
+        label: "University",
+        value: profile.university.name,
+      });
+    }
+
+    const course = formatCourse(profile);
+
+    if (course) {
+      entries.push({
+        key: "course",
+        icon: "book-outline",
+        label: "Course",
+        value: course,
+      });
+    }
+
+    const graduation = formatGraduationYear(profile.graduationYear);
+
+    if (graduation) {
+      entries.push({
+        key: "graduation",
+        icon: "calendar-outline",
+        label: "Graduation",
+        value: graduation,
+      });
+    }
+
+    if (profile.location) {
+      entries.push({
+        key: "location",
+        icon: "location-outline",
+        label: "Location",
+        value: profile.location,
+      });
+    }
+
+    return entries;
+  }, [profile]);
+
+  if (profile === null) {
+    if (status === "loading") {
+      return (
+        <Screen>
+          <LoadingState label="Loading your profile" />
+        </Screen>
+      );
+    }
+
+    if (status === "error") {
+      return (
+        <Screen>
+          <ErrorState
+            title="We could not load your profile"
+            message={errorMessage ?? "Check your connection and try again."}
+            onRetry={refresh}
+          />
+        </Screen>
+      );
+    }
+
+    return (
+      <Screen>
+        <EmptyState
+          icon="person-circle-outline"
+          title="No profile yet"
+          message="Finish onboarding to set up your student profile."
+        />
+      </Screen>
+    );
+  }
+
+  const skillNames = profile.skills.map((skill) => skill.name);
+  const interestNames = profile.interests.map((interest) => interest.name);
+
   return (
     <Screen>
-      <PageHeader
-        title="Profile"
-        subtitle="Your account and this build's configuration"
-      />
+      <PageHeader title="Profile" subtitle="How classmates see you" />
       <ScrollView
-        contentContainerStyle={{ padding: spacing.lg, gap: spacing.lg }}
+        contentContainerStyle={{
+          padding: spacing.lg,
+          paddingBottom: spacing.xxxl,
+        }}
+        refreshControl={
+          <RefreshControl
+            refreshing={isRefreshing}
+            onRefresh={refresh}
+            tintColor={colors.accent}
+            colors={[colors.accent]}
+          />
+        }
       >
-        <Card>
-          <AppText variant="heading" style={{ marginBottom: spacing.md }}>
-            Account
-          </AppText>
-          <ConfigRow
-            label="Signed in as"
-            value={user?.email ?? "Not signed in"}
-            hint={actor.detail}
-          />
-          <Divider spacing="md" />
-          <ConfigRow
-            label="Student id"
-            value={actor.actorId ?? "Unknown"}
-            hint="Your feed, communities and connections are all ranked for this student."
-          />
-          <Divider spacing="md" />
-          <View style={{ gap: spacing.md }}>
-            <ConfigRow
-              label="API base URL"
-              value={api.baseUrl ?? "Not configured"}
-              hint={api.detail}
-            />
-            {errorMessage !== null ? (
-              <InlineError
-                message={errorMessage}
-                onDismiss={() => setErrorMessage(null)}
+        <View
+          style={{
+            width: "100%",
+            maxWidth: layout.maxContentWidth,
+            alignSelf: "center",
+            gap: spacing.lg,
+          }}
+        >
+          <Card>
+            <View style={{ gap: spacing.md }}>
+              <StudentIdentity
+                name={profile.name}
+                username={profile.username}
+                imageUrl={profile.profileImageUrl}
+                size="lg"
+                nameVariant="title"
               />
-            ) : null}
-            <Button
-              label="Sign out"
-              icon="log-out-outline"
-              variant="secondary"
-              onPress={handleSignOut}
-              loading={isSigningOut}
-              fullWidth
-            />
-          </View>
-        </Card>
 
-        <Card>
-          <EmptyState
-            icon="person-circle-outline"
-            title="Profile is on the way"
-            message="Your bio, skills, interests and university details all have endpoints already. This screen will read the student profile API and let you edit it."
-          />
-        </Card>
+              {facts.length > 0 ? (
+                <View style={{ gap: spacing.md }}>
+                  {facts.map((fact) => (
+                    <Fact
+                      key={fact.key}
+                      icon={fact.icon}
+                      label={fact.label}
+                      value={fact.value}
+                    />
+                  ))}
+                </View>
+              ) : null}
+
+              <Divider />
+              <Button
+                label="Edit profile"
+                icon="create-outline"
+                variant="secondary"
+                fullWidth
+                onPress={() => router.push("/profile/edit")}
+              />
+            </View>
+          </Card>
+
+          <Card>
+            <View style={{ gap: spacing.sm }}>
+              <SectionHeading title="About" />
+              {profile.bio ? (
+                <AppText tone="secondary">{profile.bio}</AppText>
+              ) : (
+                <AppText variant="caption" tone="muted">
+                  No bio yet. Add one from Edit profile.
+                </AppText>
+              )}
+            </View>
+          </Card>
+
+          <Card>
+            <View style={{ gap: spacing.md }}>
+              <SectionHeading
+                title="Skills"
+                hint={
+                  skillNames.length > 0
+                    ? `${skillNames.length} listed`
+                    : undefined
+                }
+              />
+              <TagList
+                names={skillNames}
+                emptyMessage="No skills are listed yet."
+              />
+            </View>
+          </Card>
+
+          <Card>
+            <View style={{ gap: spacing.md }}>
+              <SectionHeading
+                title="Interests"
+                hint={
+                  interestNames.length > 0
+                    ? `${interestNames.length} listed`
+                    : undefined
+                }
+              />
+              <TagList
+                names={interestNames}
+                emptyMessage="No interests are listed yet."
+              />
+            </View>
+          </Card>
+
+          <Card>
+            <View style={{ gap: spacing.md }}>
+              <SectionHeading title="Account" />
+              <View style={{ gap: spacing.xxs }}>
+                <AppText variant="overline" tone="muted">
+                  Signed in as
+                </AppText>
+                <AppText variant="bodyStrong">
+                  {user?.email ?? "Not signed in"}
+                </AppText>
+              </View>
+              {signOutError !== null ? (
+                <InlineError
+                  message={signOutError}
+                  onDismiss={() => setSignOutError(null)}
+                />
+              ) : null}
+              <Button
+                label="Sign out"
+                icon="log-out-outline"
+                variant="secondary"
+                fullWidth
+                onPress={handleSignOut}
+                loading={isSigningOut}
+              />
+            </View>
+          </Card>
+        </View>
       </ScrollView>
     </Screen>
   );
 }
+
+const styles = StyleSheet.create({
+  row: {
+    flexDirection: "row",
+  },
+});

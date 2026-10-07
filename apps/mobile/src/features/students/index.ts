@@ -10,6 +10,9 @@ export {
   fetchStudentSkills,
   fetchUniversities,
   fetchUniversity,
+  replaceMyStudentInterests,
+  replaceMyStudentSkills,
+  updateMyStudentProfile,
   type AttachStudentInterestParams,
   type AttachStudentSkillParams,
   type CreateMyStudentProfileInput,
@@ -20,6 +23,10 @@ export {
   type FetchStudentProfileParams,
   type FetchStudentSkillsParams,
   type FetchUniversityParams,
+  type ReplaceMyInterestsParams,
+  type ReplaceMySkillsParams,
+  type UpdateMyStudentProfileInput,
+  type UpdateMyStudentProfileParams,
 } from "./api/students.api";
 
 export {

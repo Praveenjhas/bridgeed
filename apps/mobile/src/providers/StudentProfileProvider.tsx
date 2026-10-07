@@ -7,7 +7,7 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import type { StudentProfile } from "@bridgeed/shared";
+import type { StudentProfileDetails } from "@bridgeed/shared";
 import { fetchMyStudentProfile } from "@/features/students";
 import { toUserMessage } from "@/utils/errors";
 import { useAuth } from "./AuthProvider";
@@ -22,19 +22,19 @@ export type SelfProfileStatus = "loading" | "missing" | "ready" | "error";
 
 export interface StudentProfileContextValue {
   status: SelfProfileStatus;
-  /** The signed-in student's profile, once it exists. */
-  profile: StudentProfile | null;
+  /** The signed-in student's profile, once it exists, with its university and tags. */
+  profile: StudentProfileDetails | null;
   /** Message for a failed read, which the guard surfaces with a retry. */
   errorMessage: string | null;
   /** Re-reads the profile, for a retry after a failure. */
   refresh: () => void;
   /** Publishes a profile that was just created or changed, without re-reading it. */
-  applyProfile: (profile: StudentProfile) => void;
+  applyProfile: (profile: StudentProfileDetails) => void;
 }
 
 interface SelfProfileState {
   status: SelfProfileStatus;
-  profile: StudentProfile | null;
+  profile: StudentProfileDetails | null;
   errorMessage: string | null;
 }
 
@@ -128,7 +128,7 @@ export function StudentProfileProvider({
     };
   }, [actorId, isAuthenticated, requestKey]);
 
-  const applyProfile = useCallback((profile: StudentProfile) => {
+  const applyProfile = useCallback((profile: StudentProfileDetails) => {
     setState({ status: "ready", profile, errorMessage: null });
   }, []);
 
