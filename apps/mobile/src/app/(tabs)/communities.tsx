@@ -30,7 +30,7 @@ import {
   useCommunityMemberships,
 } from "@/features/communities";
 import { FeedListFooter } from "@/features/feed";
-import { useActor } from "@/providers/ActorProvider";
+import { useActor } from "@/providers/AuthProvider";
 import { useTheme } from "@/theme";
 
 /** Matches a community against the search field, on any text a reader sees. */

@@ -21,7 +21,7 @@ import {
   usePostComments,
   usePostDetails,
 } from "@/features/post";
-import { useActor } from "@/providers/ActorProvider";
+import { useActor } from "@/providers/AuthProvider";
 import { useTheme } from "@/theme";
 import { formatLongDate } from "@/utils/datetime";
 

@@ -7,8 +7,10 @@
 export {
   apiClient,
   request,
+  setAuthInterceptor,
   ApiError,
   type ApiErrorOptions,
+  type AuthInterceptor,
   type HttpMethod,
   type QueryParams,
   type QueryValue,

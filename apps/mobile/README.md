@@ -1,21 +1,22 @@
 # BridgeEd Mobile
 
 Expo (React Native) client for BridgeEd. This package currently contains the app
-foundation: the navigation shell, the design system, the API layer and four real
-features — the ranked **Feed** with post detail, comments and likes,
-**Communities** with membership, rosters and community posts, and
-**Connections** with requests, blocks and student profiles.
+foundation: the navigation shell, the design system, the API layer, real mobile
+**Authentication** built on a persisted session, and four features — the ranked
+**Feed** with post detail, comments and likes, **Communities** with membership,
+rosters and community posts, and **Connections** with requests, blocks and
+student profiles.
 
 ## Stack
 
-| Concern      | Choice                                                                                |
-| ------------ | ------------------------------------------------------------------------------------- |
-| Runtime      | Expo SDK 57 (`expo@~57.0.26`), React Native 0.86, React 19                            |
-| Navigation   | Expo Router 57, file based routes under `src/app`                                     |
-| Language     | TypeScript (strict), path alias `@/*` → `src/*`                                       |
-| Icons        | `@expo/vector-icons` (Ionicons), wrapped by `components/Icon`                         |
-| Shared types | `@bridgeed/shared` (feed, post, comment, reaction, community, connection, pagination) |
-| Formatting   | Prettier defaults (no config in this repo)                                            |
+| Concern      | Choice                                                                                      |
+| ------------ | ------------------------------------------------------------------------------------------- |
+| Runtime      | Expo SDK 57 (`expo@~57.0.26`), React Native 0.86, React 19                                  |
+| Navigation   | Expo Router 57, file based routes under `src/app`                                           |
+| Language     | TypeScript (strict), path alias `@/*` → `src/*`                                             |
+| Icons        | `@expo/vector-icons` (Ionicons), wrapped by `components/Icon`                               |
+| Shared types | `@bridgeed/shared` (auth, feed, post, comment, reaction, community, connection, pagination) |
+| Formatting   | Prettier defaults (no config in this repo)                                                  |
 
 ## Getting started
 
@@ -23,7 +24,7 @@ features — the ranked **Feed** with post detail, comments and likes,
 # 1. from the repository root — installs every workspace
 npm install
 
-# 2. configure the API location and the development actor
+# 2. configure the API location
 cd apps/mobile
 cp .env.example .env      # Windows: copy .env.example .env
 # then edit .env
@@ -50,32 +51,36 @@ to this workspace and its `expo-router/entry`.
 Only `EXPO_PUBLIC_*` variables are inlined into the bundle by Metro, so they are
 never the place for secrets.
 
-| Variable               | Purpose                                                                                                            |
-| ---------------------- | ------------------------------------------------------------------------------------------------------------------ |
-| `EXPO_PUBLIC_API_URL`  | API root without `/api/v1`, e.g. `http://192.168.1.24:4000`.                                                       |
-| `EXPO_PUBLIC_ACTOR_ID` | The student the app acts as. Required: every content endpoint takes an explicit actor until authentication exists. |
+| Variable              | Purpose                                                      |
+| --------------------- | ------------------------------------------------------------ |
+| `EXPO_PUBLIC_API_URL` | API root without `/api/v1`, e.g. `http://192.168.1.24:4000`. |
 
 If `EXPO_PUBLIC_API_URL` is empty, the app falls back to the host of the Expo dev
 server on port `4000` (the backend default), which is what makes the first local
 run work without a `.env` file. A physical device can never reach `localhost`, so
 set the variable explicitly whenever the guess is wrong.
 
-Both values are read through `src/config/env.ts` and `src/config/actor.ts`. The
-**Profile** tab shows exactly what the app resolved, which is the fastest way to
-answer "why is my feed empty".
+That value is read through `src/config/env.ts`. Who the app is signed in as is no
+longer configuration: it comes from the session the user established at sign-in.
+The **Profile** tab shows the resolved API URL, the account and the student id it
+is acting as — the fastest way to answer "why is my feed empty".
 
 ## Project structure
 
 ```text
 src
 ├─ app/                     # routes only: every file here is a screen
-│  ├─ _layout.tsx           # providers + stack (tabs, community, post, student)
+│  ├─ _layout.tsx           # providers + guards: (tabs) vs (auth)
 │  ├─ (tabs)/               # tab shell
 │  │  ├─ _layout.tsx        # bottom tabs
 │  │  ├─ index.tsx          # Feed (the built feature)
 │  │  ├─ communities.tsx    # community directory + memberships
 │  │  ├─ connections.tsx    # connections + requests + student cards
-│  │  └─ profile.tsx        # configuration + profile placeholder
+│  │  └─ profile.tsx        # account, configuration + sign out
+│  ├─ (auth)/               # signed-out area, guarded by the session
+│  │  ├─ _layout.tsx        # auth stack
+│  │  ├─ login.tsx          # sign in
+│  │  └─ register.tsx       # create an account
 │  ├─ community/
 │  │  └─ [communityId]/
 │  │     ├─ index.tsx       # community detail: header, members, posts
@@ -83,8 +88,9 @@ src
 │  ├─ post/[postId].tsx     # post detail: post, comments, composer
 │  └─ student/[studentId].tsx  # student profile + connection actions
 ├─ components/              # design system primitives, no feature knowledge
-├─ config/                  # environment and actor resolution
+├─ config/                  # environment resolution (API base URL)
 ├─ features/                # feature-first code: api, hooks, components
+│  ├─ auth/                 # auth api, session store, secure storage, form field
 │  ├─ communities/          # community, membership, member and post api + hooks
 │  ├─ connections/          # connection + request api, hooks, cards, profile CTA
 │  ├─ feed/                 # feed api, useFeed, PostCard, summary, footer
@@ -92,7 +98,7 @@ src
 │  ├─ reactions/            # like/unlike post
 │  └─ students/             # student profile, university, skills and interests
 ├─ hooks/                   # generic data hooks
-├─ providers/               # app wide providers (safe area, actor)
+├─ providers/               # app wide providers (safe area, session)
 ├─ services/api/            # transport: fetch wrapper, base URL, errors
 ├─ theme/                   # design tokens
 ├─ types/                   # ambient type references
@@ -123,6 +129,12 @@ encoding, a 15 second timeout, cancellation and error normalisation. Every
 failure becomes an `ApiError` carrying a message that is already safe to display;
 a missing API address stays an `ApiConfigurationError` because it needs setup
 instructions instead of a retry button.
+
+The same file attaches the session's bearer token to every request and, when a
+guarded route answers `401`, refreshes the access token once and replays the
+request. The credential callbacks are installed by the session layer
+(`features/auth/session.ts`) through `setAuthInterceptor`, so the transport never
+imports a feature.
 
 Feature services own routes and response types, for example:
 
@@ -180,6 +192,10 @@ Components in `components/` cover the state space a screen needs: `Screen`,
 - `(tabs)` — Feed, Communities, Connections, Profile. Tabs use the JavaScript tab
   navigator (`expo-router/js-tabs`) so the bar is identical on both platforms and
   works in Expo Go.
+- `(auth)/login` and `(auth)/register` — the signed-out area. The two groups are
+  declared with `Stack.Protected` in `app/_layout.tsx`, so the tabs do not exist
+  while nobody is signed in and the auth screens do not exist once somebody is.
+  The guard flipping is the navigation; no screen redirects by hand.
 - `community/[communityId]` — the community, pushed from the Communities tab.
 - `community/[communityId]/members` — the roster, pushed from the community.
 - `post/[postId]` — pushed on the root stack with the native header, so the
@@ -193,23 +209,24 @@ subtitle and trailing actions.
 
 ## What works today
 
-| Area                 | State                                                                                                                                                                                                                             |
-| -------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Feed                 | Real data from `GET /api/v1/feed`: cursor pagination, pull to refresh, skeletons, empty and error states, per item ranking reasons, and a summary built from `generatedAt` / `candidatesConsidered`                               |
-| Likes                | Optimistic like and unlike through `POST` / `DELETE /api/v1/posts/:postId/reactions`, with rollback and an inline error                                                                                                           |
-| Post detail          | `GET /api/v1/posts/:postId`, the comment thread from `GET /api/v1/posts/:postId/comments` with load-more, and posting through `POST /api/v1/posts/:postId/comments`                                                               |
-| Communities          | The directory from `GET /api/v1/communities` (paged, searchable over what is loaded), the reader's own memberships from `GET /api/v1/student-profiles/:userId/communities`, and clear membership badges and CTAs                  |
-| Community detail     | `GET /api/v1/communities/:communityId`, join and leave through `POST …/join` and `DELETE …/membership`, the roster from `GET …/members` and the posts from `GET …/posts` with a composer writing to `POST …/posts`                |
-| Join requests        | Owners and admins see pending requests on the member list and decide them with `PATCH /api/v1/community-memberships/:membershipId/approve` and `/reject`                                                                          |
-| Connections          | The accepted graph from `GET /api/v1/student-profiles/:userId/connections?status=accepted`, filtered locally by name or handle over what is loaded, with one card per student that opens their profile                            |
-| Connection requests  | Incoming pending requests from `GET /api/v1/student-profiles/:userId/connections/requests/received`, answered with `PATCH /api/v1/connections/:connectionId/accept` and `/reject`, with progress per row                          |
-| Student profile      | `GET /api/v1/student-profiles/:userId` with the university, skills and interests, plus a connection call to action derived from the API's own connection row                                                                      |
-| Relationship actions | `POST /api/v1/connections`, `DELETE /api/v1/connections/:connectionId/request`, `DELETE /api/v1/connections/:connectionId` and `POST /api/v1/connections/:connectionId/block`, each behind a confirmation where it ends something |
-| Profile              | Placeholder: the configuration it reports is real, the editable profile is not                                                                                                                                                    |
+| Area                 | State                                                                                                                                                                                                                                         |
+| -------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Authentication       | Register, sign in and sign out against `/api/v1/auth/*`, with the token pair kept in `expo-secure-store` (in memory where it is unavailable), a single refresh-and-retry when an access token expires, and route guards driven by the session |
+| Feed                 | Real data from `GET /api/v1/feed`: cursor pagination, pull to refresh, skeletons, empty and error states, per item ranking reasons, and a summary built from `generatedAt` / `candidatesConsidered`                                           |
+| Likes                | Optimistic like and unlike through `POST` / `DELETE /api/v1/posts/:postId/reactions`, with rollback and an inline error                                                                                                                       |
+| Post detail          | `GET /api/v1/posts/:postId`, the comment thread from `GET /api/v1/posts/:postId/comments` with load-more, and posting through `POST /api/v1/posts/:postId/comments`                                                                           |
+| Communities          | The directory from `GET /api/v1/communities` (paged, searchable over what is loaded), the reader's own memberships from `GET /api/v1/student-profiles/:userId/communities`, and clear membership badges and CTAs                              |
+| Community detail     | `GET /api/v1/communities/:communityId`, join and leave through `POST …/join` and `DELETE …/membership`, the roster from `GET …/members` and the posts from `GET …/posts` with a composer writing to `POST …/posts`                            |
+| Join requests        | Owners and admins see pending requests on the member list and decide them with `PATCH /api/v1/community-memberships/:membershipId/approve` and `/reject`                                                                                      |
+| Connections          | The accepted graph from `GET /api/v1/student-profiles/:userId/connections?status=accepted`, filtered locally by name or handle over what is loaded, with one card per student that opens their profile                                        |
+| Connection requests  | Incoming pending requests from `GET /api/v1/student-profiles/:userId/connections/requests/received`, answered with `PATCH /api/v1/connections/:connectionId/accept` and `/reject`, with progress per row                                      |
+| Student profile      | `GET /api/v1/student-profiles/:userId` with the university, skills and interests, plus a connection call to action derived from the API's own connection row                                                                                  |
+| Relationship actions | `POST /api/v1/connections`, `DELETE /api/v1/connections/:connectionId/request`, `DELETE /api/v1/connections/:connectionId` and `POST /api/v1/connections/:connectionId/block`, each behind a confirmation where it ends something             |
+| Profile              | Placeholder: the account and configuration it reports are real, the editable profile is not                                                                                                                                                   |
 
 Deliberately not built yet: unblocking a student (the API exposes no unblock
-route, so a block is one way from the app), editing a profile, authentication (the
-actor still comes from configuration), and comment reactions —
+route, so a block is one way from the app), editing a profile, password reset,
+and comment reactions —
 the comment listing does not report whether the reading student already liked a
 comment, so a toggle would be guessing. Community post cards show the like count
 as a number for the same reason: the community listing does not report the

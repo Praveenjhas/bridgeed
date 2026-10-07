@@ -1,8 +1,21 @@
 export {
+  attachStudentInterest,
+  attachStudentSkill,
+  createMyStudentProfile,
+  fetchInterests,
+  fetchMyStudentProfile,
+  fetchSkills,
   fetchStudentInterests,
   fetchStudentProfile,
   fetchStudentSkills,
+  fetchUniversities,
   fetchUniversity,
+  type AttachStudentInterestParams,
+  type AttachStudentSkillParams,
+  type CreateMyStudentProfileInput,
+  type CreateMyStudentProfileParams,
+  type FetchCatalogParams,
+  type FetchMyStudentProfileParams,
   type FetchStudentInterestsParams,
   type FetchStudentProfileParams,
   type FetchStudentSkillsParams,
@@ -32,6 +45,13 @@ export {
   type StudentInterestsState,
 } from "./hooks/useStudentInterests";
 export { useUniversity } from "./hooks/useUniversity";
+export {
+  useCatalog,
+  useInterests,
+  useSkills,
+  useUniversities,
+  type CatalogState,
+} from "./hooks/useCatalogs";
 
 export {
   StudentIdentity,

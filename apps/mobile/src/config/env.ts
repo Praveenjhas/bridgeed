@@ -9,9 +9,6 @@ const DEFAULT_API_PORT = 4000;
 /** Name of the environment variable that points the app at the API. */
 export const API_URL_ENV_VAR = "EXPO_PUBLIC_API_URL";
 
-/** Name of the environment variable that selects the development actor. */
-export const ACTOR_ID_ENV_VAR = "EXPO_PUBLIC_ACTOR_ID";
-
 /** Where the resolved API base URL came from. */
 export type ApiBaseUrlSource = "env" | "dev-server" | "none";
 

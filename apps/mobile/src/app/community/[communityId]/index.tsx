@@ -35,7 +35,7 @@ import {
   useCommunityPosts,
 } from "@/features/communities";
 import { FeedListFooter, PostCard } from "@/features/feed";
-import { useActor } from "@/providers/ActorProvider";
+import { useActor } from "@/providers/AuthProvider";
 import { useTheme } from "@/theme";
 
 /**

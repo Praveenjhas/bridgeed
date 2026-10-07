@@ -31,7 +31,7 @@ import {
   useConnections,
 } from "@/features/connections";
 import { useStudentProfiles } from "@/features/students";
-import { useActor } from "@/providers/ActorProvider";
+import { useActor } from "@/providers/AuthProvider";
 import { useTheme } from "@/theme";
 
 /**

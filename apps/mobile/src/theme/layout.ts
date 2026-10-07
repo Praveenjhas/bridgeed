@@ -7,6 +7,13 @@ import { spacing } from "./spacing";
 export const layout = {
   /** Minimum pressable size recommended by both Apple and Google. */
   minTouchTarget: 44,
+  /**
+   * Height of a text field, and of the large button that submits it.
+   *
+   * One value rather than two, so a stack of inputs and the call to action below
+   * them line up on the same rows instead of being a few pixels out.
+   */
+  controlHeight: 52,
   /** Height of the in-app header used on the feed and detail screens. */
   headerHeight: 56,
   /** Default horizontal gutter between screen edge and content. */

@@ -27,7 +27,7 @@ import {
   useMembershipRequestActions,
 } from "@/features/communities";
 import { FeedListFooter } from "@/features/feed";
-import { useActor } from "@/providers/ActorProvider";
+import { useActor } from "@/providers/AuthProvider";
 import { useTheme } from "@/theme";
 
 /**

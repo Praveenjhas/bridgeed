@@ -19,7 +19,7 @@ import {
   PostCard,
   useFeed,
 } from "@/features/feed";
-import { useActor } from "@/providers/ActorProvider";
+import { useActor } from "@/providers/AuthProvider";
 import { useTheme } from "@/theme";
 
 /**

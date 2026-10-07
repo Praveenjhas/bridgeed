@@ -38,6 +38,8 @@ export function InlineError({
   return (
     <View
       accessibilityRole="alert"
+      // Announced when it appears, so a rejected submit is not only visible.
+      accessibilityLiveRegion="polite"
       style={[
         styles.base,
         {
@@ -50,7 +52,14 @@ export function InlineError({
         style,
       ]}
     >
-      <Icon name="alert-circle-outline" tone="danger" size={16} />
+      <Icon
+        name="alert-circle-outline"
+        tone="danger"
+        size={16}
+        // A glyph is a `Text`; nudged onto the first line of a wrapping message
+        // because the row aligns to the top rather than the middle.
+        style={styles.icon}
+      />
       <AppText variant="caption" tone="danger" style={styles.message}>
         {message}
       </AppText>
@@ -82,7 +91,10 @@ export function InlineError({
 const styles = StyleSheet.create({
   base: {
     flexDirection: "row",
-    alignItems: "center",
+    alignItems: "flex-start",
+  },
+  icon: {
+    marginTop: 1,
   },
   message: {
     flex: 1,

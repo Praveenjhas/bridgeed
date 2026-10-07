@@ -30,7 +30,7 @@ import {
   useStudentSkills,
   useUniversity,
 } from "@/features/students";
-import { useActor } from "@/providers/ActorProvider";
+import { useActor } from "@/providers/AuthProvider";
 import { useTheme } from "@/theme";
 
 interface FactProps {

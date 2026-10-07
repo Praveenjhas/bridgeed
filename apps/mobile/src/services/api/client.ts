@@ -65,6 +65,54 @@ export interface RequestOptions {
   timeoutMs?: number;
 }
 
+/**
+ * The credential callbacks the session layer installs on the transport.
+ *
+ * The client owns no knowledge of sessions, storage or features: it only asks
+ * these questions. Keeping them in the transport (rather than importing the auth
+ * feature here) is what stops a cycle between `services/api` and the provider
+ * that consumes it.
+ */
+export interface AuthInterceptor {
+  /** Bearer token to send with the next request, or null while signed out. */
+  getAccessToken: () => string | null;
+  /**
+   * Exchanges the refresh token for a new access token and returns it, or
+   * returns null when the session cannot be renewed.
+   */
+  refreshAccessToken: () => Promise<string | null>;
+  /** Called once a request has been rejected and could not be recovered. */
+  onAuthFailure?: () => void;
+}
+
+let authInterceptor: AuthInterceptor | null = null;
+
+/**
+ * Installs (or clears, by passing `null`) the credential callbacks. The session
+ * provider owns the lifecycle; the transport only reads the current value.
+ */
+export function setAuthInterceptor(interceptor: AuthInterceptor | null): void {
+  authInterceptor = interceptor;
+}
+
+/**
+ * Credential endpoints that must never trigger a refresh-and-retry.
+ *
+ * Replaying a sign-in, a sign-up or the refresh call itself would either loop or
+ * spend a rate-limit budget on a request that is already known to be answered in
+ * a single attempt.
+ */
+const NON_RETRYABLE_PATHS = ["/auth/refresh", "/auth/login", "/auth/register"];
+
+function isRetryablePath(path: string): boolean {
+  return !NON_RETRYABLE_PATHS.some(
+    (blocked) =>
+      path === blocked ||
+      path.startsWith(`${blocked}/`) ||
+      path.startsWith(`${blocked}?`),
+  );
+}
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
 }
@@ -172,17 +220,15 @@ async function readResponse<TResponse>(
 }
 
 /**
- * Performs one JSON request against the BridgeEd API and returns the parsed
- * body.
- *
- * Every failure is normalised into an `ApiError`, except for a missing API
- * address which stays an `ApiConfigurationError` because it is a setup problem
- * rather than a request failure.
+ * Sends one attempt and normalises every failure into an `ApiError`, except for
+ * a missing API address which stays an `ApiConfigurationError` because it is a
+ * setup problem rather than a request failure.
  */
-export async function request<TResponse>(
+async function performRequest<TResponse>(
   method: HttpMethod,
   path: string,
-  options: RequestOptions = {},
+  options: RequestOptions,
+  accessToken: string | null,
 ): Promise<TResponse> {
   // Throws ApiConfigurationError before any network work when the address is
   // unknown, so the caller can render setup instructions instead of "offline".
@@ -200,6 +246,9 @@ export async function request<TResponse>(
       headers: {
         Accept: "application/json",
         ...(hasBody ? { "Content-Type": "application/json" } : null),
+        // The bearer token is the only credential the API accepts; absent while
+        // signed out, which the API answers with 401 for guarded routes.
+        ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : null),
       },
       body: hasBody ? JSON.stringify(options.body) : undefined,
       signal: controller.signal,
@@ -239,6 +288,48 @@ export async function request<TResponse>(
   } finally {
     clearTimeout(timer);
     unlink();
+  }
+}
+
+/**
+ * Performs one JSON request against the BridgeEd API and returns the parsed
+ * body.
+ *
+ * When a session is installed and a guarded route answers 401, the access token
+ * is refreshed once and the request replayed with the new credential. A second
+ * 401, or a refresh that returns nothing, clears the session so the route guards
+ * can send the user back to sign-in.
+ */
+export async function request<TResponse>(
+  method: HttpMethod,
+  path: string,
+  options: RequestOptions = {},
+): Promise<TResponse> {
+  const interceptor = authInterceptor;
+  const accessToken = interceptor?.getAccessToken() ?? null;
+
+  try {
+    return await performRequest<TResponse>(method, path, options, accessToken);
+  } catch (error) {
+    const isUnauthorized = error instanceof ApiError && error.status === 401;
+
+    if (
+      !isUnauthorized ||
+      interceptor === null ||
+      accessToken === null ||
+      !isRetryablePath(path)
+    ) {
+      throw error;
+    }
+
+    const refreshedToken = await interceptor.refreshAccessToken();
+
+    if (refreshedToken === null) {
+      interceptor.onAuthFailure?.();
+      throw error;
+    }
+
+    return performRequest<TResponse>(method, path, options, refreshedToken);
   }
 }
 
