@@ -38,11 +38,15 @@ export class CommunityController {
         coverImageUrl?: unknown;
       };
 
+      // The owner is the authenticated account; the body's `createdById` is read
+      // only for the unauthenticated legacy path.
+      const createdById = req.auth?.userId ?? body.createdById;
+
       if (
         !this.isNonEmptyString(body.name) ||
         !this.isNonEmptyString(body.slug) ||
         !this.isNonEmptyString(body.type) ||
-        !this.isNonEmptyString(body.createdById)
+        !this.isNonEmptyString(createdById)
       ) {
         res.status(400).json({
           error: "name, slug, type and createdById are required",
@@ -55,7 +59,7 @@ export class CommunityController {
         slug: body.slug,
         description: body.description,
         type: body.type,
-        createdById: body.createdById,
+        createdById,
         coverImageUrl: body.coverImageUrl,
       });
 
@@ -204,7 +208,10 @@ export class CommunityController {
         return;
       }
 
-      const { userId } = (req.body ?? {}) as { userId?: unknown };
+      // The joining member is the authenticated account; the body's `userId` is
+      // read only for the unauthenticated legacy path.
+      const { userId: legacyUserId } = (req.body ?? {}) as { userId?: unknown };
+      const userId = req.auth?.userId ?? legacyUserId;
 
       if (!this.isNonEmptyString(userId)) {
         res.status(400).json({
@@ -356,7 +363,16 @@ export class CommunityController {
     return parsed > 0 ? parsed : null;
   }
 
+  /**
+   * The acting account of a community action: listing join requests or leaving.
+   * The authenticated account always wins; the explicit `actorId`/`userId` is a
+   * legacy fallback read only for unauthenticated requests.
+   */
   private readActorId(req: Request): string | null {
+    if (req.auth) {
+      return req.auth.userId;
+    }
+
     const { actorId, userId } = (req.body ?? {}) as {
       actorId?: unknown;
       userId?: unknown;

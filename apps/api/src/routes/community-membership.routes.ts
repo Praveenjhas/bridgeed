@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { CommunityMembershipController } from "../controllers/community-membership.controller";
+import { optionalAuth } from "../middleware/require-auth";
 import { CommunityMembershipService } from "../services/community-membership.service";
 import { CommunityService } from "../services/community.service";
 import { CommunityRepository } from "../repositories/community.repository";
@@ -25,6 +26,13 @@ const communityMembershipController = new CommunityMembershipController(
 );
 
 export const communityMembershipRouter = Router();
+
+/**
+ * `optionalAuth` makes the authenticated account the manager who approves or
+ * rejects a join request whenever a bearer token is present; the explicit
+ * `actorId` survives only for the unauthenticated legacy path.
+ */
+communityMembershipRouter.use(optionalAuth);
 
 communityMembershipRouter.get(
   "/:membershipId",

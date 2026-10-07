@@ -39,53 +39,50 @@ export async function fetchStudentMemberships({
 
 export interface JoinCommunityParams {
   communityId: string;
-  /** The student joining. This route reads `userId` rather than `actorId`. */
-  userId: string;
   signal?: AbortSignal;
 }
 
 /**
  * Joins a community, or asks to join it.
  *
- * The API decides which of the two happens from the community type, and it owns
- * every rule around that: a public community activates the membership, a private
- * one creates a pending request, a ban cannot be bypassed and an existing active
- * membership or pending request is rejected as a conflict rather than duplicated.
+ * The joining member is the signed-in account, taken by the API from the bearer
+ * token, so a client cannot join on somebody else's behalf; only the community is
+ * sent. The API decides from the community type whether this activates the
+ * membership or creates a pending request, and it owns every rule around that: a
+ * ban cannot be bypassed and an existing active membership or pending request is
+ * rejected as a conflict rather than duplicated.
  */
 export async function joinCommunity({
   communityId,
-  userId,
   signal,
 }: JoinCommunityParams): Promise<CommunityMembership> {
   return apiClient.post<CommunityMembership>(
     `/communities/${encodeURIComponent(communityId)}/join`,
-    { body: { userId }, signal },
+    { signal },
   );
 }
 
 export interface LeaveCommunityParams {
   communityId: string;
-  /** The student leaving, or cancelling their own pending request. */
-  actorId: string;
   signal?: AbortSignal;
 }
 
 /**
- * Removes the actor's own membership.
+ * Removes the signed-in student's own membership.
  *
- * It covers two intents with one call: an active member leaves the community,
- * and a student with a pending request withdraws it. The API refuses to let an
- * owner leave their own community, so the UI keeps that button away rather than
- * offering an action that cannot succeed.
+ * The member is taken by the API from the bearer token, so only the community is
+ * sent. It covers two intents with one call: an active member leaves the
+ * community, and a student with a pending request withdraws it. The API refuses
+ * to let an owner leave their own community, so the UI keeps that button away
+ * rather than offering an action that cannot succeed.
  */
 export async function leaveCommunity({
   communityId,
-  actorId,
   signal,
 }: LeaveCommunityParams): Promise<void> {
   await apiClient.remove<void>(
     `/communities/${encodeURIComponent(communityId)}/membership`,
-    { query: { actorId }, signal },
+    { signal },
   );
 }
 
@@ -125,31 +122,33 @@ export type MembershipDecision = "approve" | "reject";
 export interface DecideMembershipParams {
   /** Id of the membership row the request belongs to, not the student id. */
   membershipId: string;
-  /** The owner or admin deciding. */
-  actorId: string;
   signal?: AbortSignal;
 }
 
-/** Approves a pending join request. The API allows owners and admins only. */
+/**
+ * Approves a pending join request. The deciding manager is the signed-in account,
+ * taken by the API from the bearer token; the API allows owners and admins only.
+ */
 export async function approveMembership({
   membershipId,
-  actorId,
   signal,
 }: DecideMembershipParams): Promise<CommunityMembership> {
   return apiClient.patch<CommunityMembership>(
     `/community-memberships/${encodeURIComponent(membershipId)}/approve`,
-    { body: { actorId }, signal },
+    { signal },
   );
 }
 
-/** Rejects a pending join request. The API allows owners and admins only. */
+/**
+ * Rejects a pending join request. The deciding manager is the signed-in account,
+ * taken by the API from the bearer token; the API allows owners and admins only.
+ */
 export async function rejectMembership({
   membershipId,
-  actorId,
   signal,
 }: DecideMembershipParams): Promise<CommunityMembership> {
   return apiClient.patch<CommunityMembership>(
     `/community-memberships/${encodeURIComponent(membershipId)}/reject`,
-    { body: { actorId }, signal },
+    { signal },
   );
 }

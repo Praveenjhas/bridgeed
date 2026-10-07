@@ -4,11 +4,13 @@ import {
   ReactionService,
 } from "../services/reaction.service";
 import { sendContentError } from "../utils/content-errors";
-import { readActorId, readRouteParam } from "../utils/request";
+import { readCurrentActorId, readRouteParam } from "../utils/request";
 
 /**
- * Reactions only ever act on the stored rows: the client sends who it is, and
- * the service verifies membership and ownership against the database.
+ * Reactions only ever act on the stored rows. The reacting account is the
+ * authenticated one whenever a bearer token is present; the service then verifies
+ * membership and ownership against the database, so nobody can react for somebody
+ * else. The explicit `userId` is read only for the unauthenticated legacy path.
  */
 export class ReactionController {
   constructor(private readonly reactionService: ReactionService) {}
@@ -22,7 +24,7 @@ export class ReactionController {
         return;
       }
 
-      const userId = readActorId(req);
+      const userId = readCurrentActorId(req);
 
       if (!userId) {
         res.status(400).json({ error: REACTION_USER_REQUIRED_MESSAGE });
@@ -51,7 +53,7 @@ export class ReactionController {
         return;
       }
 
-      const userId = readActorId(req);
+      const userId = readCurrentActorId(req);
 
       if (!userId) {
         res.status(400).json({ error: REACTION_USER_REQUIRED_MESSAGE });
@@ -75,7 +77,7 @@ export class ReactionController {
         return;
       }
 
-      const userId = readActorId(req);
+      const userId = readCurrentActorId(req);
 
       if (!userId) {
         res.status(400).json({ error: REACTION_USER_REQUIRED_MESSAGE });
@@ -104,7 +106,7 @@ export class ReactionController {
         return;
       }
 
-      const userId = readActorId(req);
+      const userId = readCurrentActorId(req);
 
       if (!userId) {
         res.status(400).json({ error: REACTION_USER_REQUIRED_MESSAGE });

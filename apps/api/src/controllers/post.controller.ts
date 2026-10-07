@@ -7,7 +7,7 @@ import {
 import { sendContentError } from "../utils/content-errors";
 import {
   isNonEmptyString,
-  readActorId,
+  readCurrentActorId,
   readPagination,
   readRouteParam,
 } from "../utils/request";
@@ -28,7 +28,7 @@ export class PostController {
         content?: unknown;
         type?: unknown;
       };
-      const authorId = readActorId(req);
+      const authorId = readCurrentActorId(req);
 
       if (!authorId) {
         res.status(400).json({ error: POST_AUTHOR_REQUIRED_MESSAGE });
@@ -61,7 +61,7 @@ export class PostController {
         return;
       }
 
-      const actorId = readActorId(req);
+      const actorId = readCurrentActorId(req);
 
       if (!actorId) {
         res.status(400).json({ error: "actorId is required" });
@@ -96,7 +96,7 @@ export class PostController {
         return;
       }
 
-      const actorId = readActorId(req);
+      const actorId = readCurrentActorId(req);
 
       if (!actorId) {
         res.status(400).json({ error: "actorId is required" });
@@ -120,7 +120,7 @@ export class PostController {
         return;
       }
 
-      const actorId = readActorId(req);
+      const actorId = readCurrentActorId(req);
 
       if (!actorId) {
         res.status(400).json({ error: "actorId is required" });
@@ -151,7 +151,7 @@ export class PostController {
         return;
       }
 
-      const actorId = readActorId(req);
+      const actorId = readCurrentActorId(req);
 
       if (!actorId) {
         res.status(400).json({ error: "actorId is required" });

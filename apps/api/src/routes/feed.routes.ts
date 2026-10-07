@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { FeedController } from "../controllers/feed.controller";
+import { optionalAuth } from "../middleware/require-auth";
 import { FeedService } from "../services/feed.service";
 import { CommunityService } from "../services/community.service";
 import { FeedRepository } from "../repositories/feed.repository";
@@ -37,4 +38,10 @@ const feedController = new FeedController(feedService);
 /** Mounted at /api/v1/feed */
 export const feedRouter = Router();
 
-feedRouter.get("/", feedController.getFeed);
+/**
+ * The canonical request is `GET /feed?limit=&cursor=` with a bearer token; the
+ * actor is then `req.auth.userId`. `optionalAuth` also lets the legacy
+ * `GET /feed?actorId=` shape through, which is kept solely for the live smoke
+ * suite and never overrides an authenticated identity.
+ */
+feedRouter.get("/", optionalAuth, feedController.getFeed);

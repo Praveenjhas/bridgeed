@@ -36,7 +36,7 @@ export interface UseConnectionActionsOptions {
   onChanged: () => void;
 }
 
-type ActorAction = (actorId: string, signal: AbortSignal) => Promise<unknown>;
+type ActorAction = (signal: AbortSignal) => Promise<unknown>;
 
 /** Ids in flight are tracked separately, because they are different things. */
 type TargetKind = "connection" | "student";
@@ -87,7 +87,7 @@ export function useConnectionActions({
       setPending((current) => new Set(current).add(targetId));
 
       try {
-        await action(actorId, controller.signal);
+        await action(controller.signal);
         onChanged();
         return true;
       } catch (error) {
@@ -134,66 +134,52 @@ export function useConnectionActions({
     [actorId, pendingStudentIds, run],
   );
 
+  // Every action names only the target; the acting account is read by the API
+  // from the bearer token, so it can never be somebody else.
   const sendRequest = useCallback(
     (studentId: string) =>
-      runOnStudent(studentId, (actingStudentId, signal) =>
-        createConnectionRequest({
-          requesterId: actingStudentId,
-          receiverId: studentId,
-          signal,
-        }),
+      runOnStudent(studentId, (signal) =>
+        createConnectionRequest({ receiverId: studentId, signal }),
       ),
     [runOnStudent],
   );
 
   const acceptRequest = useCallback(
     (connectionId: string) =>
-      runOnConnection(connectionId, (actingStudentId, signal) =>
-        acceptConnection({ connectionId, actorId: actingStudentId, signal }),
+      runOnConnection(connectionId, (signal) =>
+        acceptConnection({ connectionId, signal }),
       ),
     [runOnConnection],
   );
 
   const rejectRequest = useCallback(
     (connectionId: string) =>
-      runOnConnection(connectionId, (actingStudentId, signal) =>
-        rejectConnection({ connectionId, actorId: actingStudentId, signal }),
+      runOnConnection(connectionId, (signal) =>
+        rejectConnection({ connectionId, signal }),
       ),
     [runOnConnection],
   );
 
   const cancelRequest = useCallback(
     (connectionId: string) =>
-      runOnConnection(connectionId, (actingStudentId, signal) =>
-        cancelConnectionRequest({
-          connectionId,
-          actorId: actingStudentId,
-          signal,
-        }),
+      runOnConnection(connectionId, (signal) =>
+        cancelConnectionRequest({ connectionId, signal }),
       ),
     [runOnConnection],
   );
 
   const removeConnection = useCallback(
     (connectionId: string) =>
-      runOnConnection(connectionId, (actingStudentId, signal) =>
-        removeConnectionRequest({
-          connectionId,
-          actorId: actingStudentId,
-          signal,
-        }),
+      runOnConnection(connectionId, (signal) =>
+        removeConnectionRequest({ connectionId, signal }),
       ),
     [runOnConnection],
   );
 
   const blockConnection = useCallback(
     (connectionId: string) =>
-      runOnConnection(connectionId, (actingStudentId, signal) =>
-        blockConnectionRequest({
-          connectionId,
-          actorId: actingStudentId,
-          signal,
-        }),
+      runOnConnection(connectionId, (signal) =>
+        blockConnectionRequest({ connectionId, signal }),
       ),
     [runOnConnection],
   );

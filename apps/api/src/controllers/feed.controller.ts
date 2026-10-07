@@ -6,19 +6,23 @@ import {
   FeedService,
 } from "../services/feed.service";
 import { sendContentError } from "../utils/content-errors";
-import { readActorId, readFeedCursor, readFeedLimit } from "../utils/request";
+import {
+  readCurrentActorId,
+  readFeedCursor,
+  readFeedLimit,
+} from "../utils/request";
 
 export class FeedController {
   constructor(private readonly feedService: FeedService) {}
 
   /**
-   * Returns one page of the ranked feed of the acting student. Until
-   * authentication exists the actor is supplied as `actorId`, exactly like the
-   * other content endpoints.
+   * Returns one page of the ranked feed of the acting student. The actor is the
+   * authenticated account when a bearer token is present, and only falls back to
+   * the legacy explicit `actorId` for an unauthenticated request.
    */
   getFeed = async (req: Request, res: Response): Promise<void> => {
     try {
-      const actorId = readActorId(req);
+      const actorId = readCurrentActorId(req);
 
       if (!actorId) {
         res.status(400).json({ error: FEED_ACTOR_REQUIRED_MESSAGE });

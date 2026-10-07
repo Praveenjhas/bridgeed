@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { CommunityController } from "../controllers/community.controller";
+import { optionalAuth } from "../middleware/require-auth";
 import { CommunityService } from "../services/community.service";
 import { CommunityMembershipService } from "../services/community-membership.service";
 import { CommunityRepository } from "../repositories/community.repository";
@@ -26,6 +27,14 @@ const communityController = new CommunityController(
 );
 
 export const communityRouter = Router();
+
+/**
+ * `optionalAuth` makes the authenticated account the owner of a created
+ * community, the member who joins or leaves, and the manager who decides a join
+ * request whenever a bearer token is present. The explicit `createdById`/`userId`
+ * /`actorId` fields survive only for the unauthenticated legacy path.
+ */
+communityRouter.use(optionalAuth);
 
 communityRouter.post("/", communityController.createCommunity);
 communityRouter.get("/", communityController.getCommunities);

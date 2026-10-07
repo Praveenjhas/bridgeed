@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { ConnectionController } from "../controllers/connection.controller";
+import { optionalAuth } from "../middleware/require-auth";
 import { ConnectionService } from "../services/connection.service";
 import { ConnectionRepository } from "../repositories/connection.repository";
 import { StudentProfileRepository } from "../repositories/student-profile.repository";
@@ -15,6 +16,15 @@ const connectionService = new ConnectionService(
 const connectionController = new ConnectionController(connectionService);
 
 export const connectionRouter = Router();
+
+/**
+ * `optionalAuth` makes the authenticated account the acting participant of every
+ * mutation (the requester of a new request, the decision-maker on an existing
+ * one), so a client cannot request, accept, block or remove on behalf of another
+ * user. The explicit `requesterId`/`actorId` shape is retained only for the
+ * unauthenticated legacy path.
+ */
+connectionRouter.use(optionalAuth);
 
 connectionRouter.post("/", connectionController.createConnectionRequest);
 connectionRouter.get("/:connectionId", connectionController.getConnectionById);

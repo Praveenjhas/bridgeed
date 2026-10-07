@@ -54,8 +54,8 @@ export function useMembershipRequestActions({
 
       const request =
         decision === "approve"
-          ? approveMembership({ membershipId, actorId })
-          : rejectMembership({ membershipId, actorId });
+          ? approveMembership({ membershipId })
+          : rejectMembership({ membershipId });
 
       void request
         .then(() => {

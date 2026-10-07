@@ -6,7 +6,7 @@ import {
 } from "../services/comment.service";
 import { sendContentError } from "../utils/content-errors";
 import {
-  readActorId,
+  readCurrentActorId,
   readPagination,
   readRouteParam,
 } from "../utils/request";
@@ -24,7 +24,7 @@ export class CommentController {
       }
 
       const { content } = (req.body ?? {}) as { content?: unknown };
-      const authorId = readActorId(req);
+      const authorId = readCurrentActorId(req);
 
       if (!authorId) {
         res.status(400).json({ error: COMMENT_AUTHOR_REQUIRED_MESSAGE });
@@ -56,7 +56,7 @@ export class CommentController {
         return;
       }
 
-      const actorId = readActorId(req);
+      const actorId = readCurrentActorId(req);
 
       if (!actorId) {
         res.status(400).json({ error: "actorId is required" });
@@ -93,7 +93,7 @@ export class CommentController {
         return;
       }
 
-      const actorId = readActorId(req);
+      const actorId = readCurrentActorId(req);
 
       if (!actorId) {
         res.status(400).json({ error: "actorId is required" });
@@ -117,7 +117,7 @@ export class CommentController {
         return;
       }
 
-      const actorId = readActorId(req);
+      const actorId = readCurrentActorId(req);
 
       if (!actorId) {
         res.status(400).json({ error: "actorId is required" });
@@ -152,7 +152,7 @@ export class CommentController {
         return;
       }
 
-      const actorId = readActorId(req);
+      const actorId = readCurrentActorId(req);
 
       if (!actorId) {
         res.status(400).json({ error: "actorId is required" });

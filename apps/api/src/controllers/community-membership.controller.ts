@@ -74,7 +74,16 @@ export class CommunityMembershipController {
     return this.isNonEmptyString(membershipId) ? membershipId : null;
   }
 
+  /**
+   * The manager deciding a join request. The authenticated account always wins;
+   * the explicit `actorId`/`userId` is a legacy fallback read only for
+   * unauthenticated requests.
+   */
   private readActorId(req: Request): string | null {
+    if (req.auth) {
+      return req.auth.userId;
+    }
+
     const { actorId, userId } = (req.body ?? {}) as {
       actorId?: unknown;
       userId?: unknown;

@@ -66,7 +66,6 @@ export function useFeed(actorId: string | null): FeedState {
       }
 
       const page = await fetchFeedPage({
-        actorId,
         cursor,
         limit: FEED_PAGE_LIMIT,
         signal,
@@ -117,9 +116,11 @@ export function useFeed(actorId: string | null): FeedState {
         likeCount: optimisticCount,
       });
 
+      // The reaction is attributed to the signed-in account by the API, so the
+      // only thing the client says is which post moved.
       const request = wasLiked
-        ? unlikePost({ postId: item.id, actorId })
-        : likePost({ postId: item.id, actorId });
+        ? unlikePost({ postId: item.id })
+        : likePost({ postId: item.id });
 
       void request
         .catch((error: unknown) => {

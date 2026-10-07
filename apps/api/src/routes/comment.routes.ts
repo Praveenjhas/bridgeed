@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { CommentController } from "../controllers/comment.controller";
+import { optionalAuth } from "../middleware/require-auth";
 import { CommentService } from "../services/comment.service";
 import { PostService } from "../services/post.service";
 import { CommunityService } from "../services/community.service";
@@ -43,6 +44,15 @@ const commentController = new CommentController(commentService);
 
 /** Mounted at /api/v1/comments */
 export const commentRouter = Router();
+
+/**
+ * `optionalAuth` makes the authenticated account the reader and the author of
+ * these comment operations whenever a bearer token is present, so a client cannot
+ * read or edit a comment as somebody else. The explicit `actorId`/`authorId`
+ * survives only for the unauthenticated legacy path. Comment create and list
+ * live under the post router, which carries the same guard.
+ */
+commentRouter.use(optionalAuth);
 
 commentRouter.get("/:commentId", commentController.getCommentById);
 commentRouter.patch("/:commentId", commentController.updateComment);

@@ -47,101 +47,94 @@ export async function fetchReceivedConnectionRequests({
 }
 
 export interface CreateConnectionRequestParams {
-  /** The student sending the request; the API stores them as the requester. */
-  requesterId: string;
-  /** The student receiving it. */
+  /** The student receiving the request. The requester is the signed-in account. */
   receiverId: string;
   signal?: AbortSignal;
 }
 
 /**
- * Sends a connection request.
+ * Sends a connection request from the signed-in student.
  *
- * The API owns every rule around this: connecting with yourself, a request that
- * is already pending, an existing connection and a block are all answered as
- * conflicts, and a previously rejected request is reopened rather than
- * duplicated. Callers therefore react to the resulting state instead of assuming
- * a fresh pending row was created.
+ * The requester is taken by the API from the bearer token, so a client cannot
+ * send a request on somebody else's behalf; only the target is sent. The API owns
+ * every rule around this: connecting with yourself, a request that is already
+ * pending, an existing connection and a block are all answered as conflicts, and
+ * a previously rejected request is reopened rather than duplicated. Callers
+ * therefore react to the resulting state instead of assuming a fresh pending row
+ * was created.
  */
 export async function createConnectionRequest({
-  requesterId,
   receiverId,
   signal,
 }: CreateConnectionRequestParams): Promise<Connection> {
   return apiClient.post<Connection>("/connections", {
-    body: { requesterId, receiverId },
+    body: { receiverId },
     signal,
   });
 }
 
 export interface DecideConnectionParams {
   connectionId: string;
-  /** The student acting. The API checks they are part of the connection. */
-  actorId: string;
   signal?: AbortSignal;
 }
 
 /** Accepts a pending request. The API allows the recipient only. */
 export async function acceptConnection({
   connectionId,
-  actorId,
   signal,
 }: DecideConnectionParams): Promise<Connection> {
   return apiClient.patch<Connection>(
     `/connections/${encodeURIComponent(connectionId)}/accept`,
-    { body: { actorId }, signal },
+    { signal },
   );
 }
 
 /** Rejects a pending request. The API allows the recipient only. */
 export async function rejectConnection({
   connectionId,
-  actorId,
   signal,
 }: DecideConnectionParams): Promise<Connection> {
   return apiClient.patch<Connection>(
     `/connections/${encodeURIComponent(connectionId)}/reject`,
-    { body: { actorId }, signal },
+    { signal },
   );
 }
 
 /**
  * Blocks the other participant.
  *
- * The API keeps the row and records who blocked whom, so the relationship stays
- * visible as blocked and no further request can be sent across it.
+ * The acting account is taken by the API from the bearer token. The API keeps the
+ * row and records who blocked whom, so the relationship stays visible as blocked
+ * and no further request can be sent across it.
  */
 export async function blockConnection({
   connectionId,
-  actorId,
   signal,
 }: DecideConnectionParams): Promise<Connection> {
   return apiClient.post<Connection>(
     `/connections/${encodeURIComponent(connectionId)}/block`,
-    { body: { actorId }, signal },
+    { signal },
   );
 }
 
-/** Withdraws a request the actor sent. The API allows the requester only. */
+/** Withdraws a request the signed-in student sent. The API allows the requester only. */
 export async function cancelConnectionRequest({
   connectionId,
-  actorId,
   signal,
 }: DecideConnectionParams): Promise<void> {
   await apiClient.remove<void>(
     `/connections/${encodeURIComponent(connectionId)}/request`,
-    { query: { actorId }, signal },
+    { signal },
   );
 }
 
 /** Removes an accepted connection, for either participant. */
 export async function removeConnection({
   connectionId,
-  actorId,
   signal,
 }: DecideConnectionParams): Promise<void> {
   await apiClient.remove<void>(
     `/connections/${encodeURIComponent(connectionId)}`,
-    { query: { actorId }, signal },
+    { signal },
   );
 }

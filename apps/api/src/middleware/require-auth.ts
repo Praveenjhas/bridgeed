@@ -117,6 +117,34 @@ export async function requireAuth(
 }
 
 /**
+ * Attaches `req.auth` when a request carries a valid access token, and leaves
+ * the request unauthenticated when it carries none.
+ *
+ * The social routes have a canonical shape and a retained legacy shape that
+ * predates authentication. This guard lets one handler serve both without ever
+ * trusting a client identity field for an authenticated caller: when a token is
+ * present it is verified exactly as `requireAuth` verifies it, so
+ * `req.auth.userId` becomes the only source of the acting account. When no token
+ * is present the request is simply left without an authenticated context, and
+ * only the legacy explicit-id path may run.
+ *
+ * A token that is present but unusable is still rejected with 401, so a failed
+ * authentication attempt can never silently degrade to the legacy path.
+ */
+export async function optionalAuth(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): Promise<void> {
+  if (readBearerToken(req) === null) {
+    next();
+    return;
+  }
+
+  await requireAuth(req, res, next);
+}
+
+/**
  * Reads the authenticated context a guarded route depends on. A missing value
  * means the route was mounted without `requireAuth`, which is a programming
  * error and surfaces as a 500 rather than as a silent `undefined`.

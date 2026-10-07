@@ -119,9 +119,7 @@ export function useCommunityMembership(
       return false;
     }
 
-    return runAction((signal) =>
-      joinCommunity({ communityId, userId: actorId, signal }),
-    );
+    return runAction((signal) => joinCommunity({ communityId, signal }));
   }, [actorId, communityId, runAction]);
 
   const leave = useCallback(async () => {
@@ -129,9 +127,7 @@ export function useCommunityMembership(
       return false;
     }
 
-    return runAction((signal) =>
-      leaveCommunity({ communityId, actorId, signal }),
-    );
+    return runAction((signal) => leaveCommunity({ communityId, signal }));
   }, [actorId, canLeave, communityId, runAction]);
 
   const dismissActionError = useCallback(() => {

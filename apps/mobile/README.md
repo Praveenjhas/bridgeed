@@ -140,8 +140,13 @@ Feature services own routes and response types, for example:
 
 ```ts
 // features/feed/api/feed.api.ts
-fetchFeedPage({ actorId, cursor, limit, signal }): Promise<FeedPage>
+fetchFeedPage({ cursor, limit, signal }): Promise<FeedPage>
 ```
+
+The acting account is never sent for these social routes: the API reads it from
+the bearer token, so a client cannot act — post, comment, react, connect, join —
+as somebody else. Only target resources (a post id, another student id, a
+community id) travel in the request.
 
 ### Data hooks
 

@@ -17,17 +17,21 @@ export class ConnectionController {
     res: Response,
   ): Promise<void> => {
     try {
-      const { requesterId, receiverId, recipientId } = req.body as {
+      const { requesterId, receiverId, recipientId } = (req.body ?? {}) as {
         requesterId?: unknown;
         receiverId?: unknown;
         recipientId?: unknown;
       };
 
       const targetId = receiverId ?? recipientId;
+      // The requester is the authenticated account. The body's `requesterId` is
+      // read only for the unauthenticated legacy path, so an authenticated
+      // caller can never send a request as somebody else.
+      const actingRequesterId = req.auth?.userId ?? requesterId;
 
       if (
-        typeof requesterId !== "string" ||
-        requesterId.trim().length === 0 ||
+        typeof actingRequesterId !== "string" ||
+        actingRequesterId.trim().length === 0 ||
         typeof targetId !== "string" ||
         targetId.trim().length === 0
       ) {
@@ -39,7 +43,7 @@ export class ConnectionController {
 
       const connection =
         await this.connectionService.createConnectionRequest(
-          requesterId,
+          actingRequesterId,
           targetId,
         );
 
@@ -283,7 +287,16 @@ export class ConnectionController {
     return typeof userId === "string" && userId.length > 0 ? userId : null;
   }
 
+  /**
+   * The acting participant of a connection mutation: accept, reject, cancel,
+   * remove or block. The authenticated account always wins; the explicit
+   * `actorId` is a legacy fallback read only for unauthenticated requests.
+   */
   private readActorId(req: Request): string | null {
+    if (req.auth) {
+      return req.auth.userId;
+    }
+
     const { actorId } = (req.body ?? {}) as { actorId?: unknown };
 
     if (typeof actorId === "string" && actorId.trim().length > 0) {

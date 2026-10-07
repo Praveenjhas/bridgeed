@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { ReactionController } from "../controllers/reaction.controller";
+import { optionalAuth } from "../middleware/require-auth";
 import { ReactionService } from "../services/reaction.service";
 import { PostService } from "../services/post.service";
 import { CommentService } from "../services/comment.service";
@@ -58,11 +59,20 @@ const reactionController = new ReactionController(reactionService);
 /** Mounted at /api/v1/posts/:postId/reactions */
 export const postReactionRouter = Router({ mergeParams: true });
 
+/**
+ * `optionalAuth` makes the reacting account the authenticated one whenever a
+ * bearer token is present, so a client cannot like on somebody else's behalf.
+ * The explicit `userId` shape survives only for the unauthenticated legacy path.
+ */
+postReactionRouter.use(optionalAuth);
+
 postReactionRouter.post("/", reactionController.likePost);
 postReactionRouter.delete("/", reactionController.unlikePost);
 
 /** Mounted at /api/v1/comments/:commentId/reactions */
 export const commentReactionRouter = Router({ mergeParams: true });
+
+commentReactionRouter.use(optionalAuth);
 
 commentReactionRouter.post("/", reactionController.likeComment);
 commentReactionRouter.delete("/", reactionController.unlikeComment);

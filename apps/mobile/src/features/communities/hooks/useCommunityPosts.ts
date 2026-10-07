@@ -71,7 +71,6 @@ export function useCommunityPosts(
       try {
         const result = await fetchCommunityPosts({
           communityId,
-          actorId,
           page: requestedPage,
           limit: COMMUNITY_POSTS_PAGE_LIMIT,
           signal,
@@ -131,7 +130,6 @@ export function useCommunityPosts(
       try {
         await createCommunityPost({
           communityId,
-          authorId: actorId,
           content: trimmed,
         });
         refresh();

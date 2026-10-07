@@ -54,7 +54,6 @@ export function usePostComments(
       const requestedPage = page ?? DEFAULT_PAGE;
       const result = await fetchPostComments({
         postId,
-        actorId,
         page: requestedPage,
         limit: COMMENTS_PAGE_LIMIT,
         signal,
@@ -95,7 +94,7 @@ export function usePostComments(
       setSubmitErrorMessage(null);
 
       try {
-        await createPostComment({ postId, actorId, content: trimmed });
+        await createPostComment({ postId, content: trimmed });
         refresh();
         return true;
       } catch (error) {

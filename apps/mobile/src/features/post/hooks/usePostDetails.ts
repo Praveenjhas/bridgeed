@@ -12,10 +12,13 @@ export interface PostDetailsState {
 }
 
 /**
- * Loads one post, with no loading at all until both ids are known.
+ * Loads one post, with no loading at all until the post is known and a session
+ * exists.
  *
- * The id comes from the route and the actor from configuration, so `enabled`
- * keeps the hook from firing a request that is guaranteed to fail.
+ * The id comes from the route and the reader is read by the API from the bearer
+ * token, so `actorId` only gates whether there is a session to read with; it is
+ * never sent. `enabled` keeps the hook from firing a request that is guaranteed
+ * to fail.
  */
 export function usePostDetails(
   postId: string | null,
@@ -24,10 +27,10 @@ export function usePostDetails(
   const load = useCallback(
     async (signal: AbortSignal) => {
       if (!postId || !actorId) {
-        throw new Error("A post and an actor are both required.");
+        throw new Error("A post and a session are both required.");
       }
 
-      return fetchPostById({ postId, actorId, signal });
+      return fetchPostById({ postId, signal });
     },
     [actorId, postId],
   );

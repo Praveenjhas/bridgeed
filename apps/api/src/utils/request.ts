@@ -16,10 +16,14 @@ export function readRouteParam(req: Request, name: string): string | null {
 }
 
 /**
- * Reads the acting student from the request. Until authentication exists the
- * actor is supplied explicitly, either in the payload or in the query string,
- * using the same precedence as the community endpoints. Content endpoints use
- * `authorId` while reactions use `userId`, so both are accepted.
+ * Legacy acting student, supplied explicitly by the client.
+ *
+ * This is the pre-authentication contract the live smoke suites still exercise:
+ * the actor arrives in the payload or the query string, using the same
+ * precedence as the community endpoints, with content endpoints sending
+ * `authorId` and reactions sending `userId`. It is only ever reached through
+ * `readCurrentActorId`, which prefers the authenticated account first, so an
+ * authenticated caller can never make it name somebody else.
  */
 export function readActorId(req: Request): string | null {
   const { actorId, userId, authorId } = (req.body ?? {}) as {
@@ -44,6 +48,20 @@ export function readActorId(req: Request): string | null {
     req.query.actorId ?? req.query.userId ?? req.query.authorId;
 
   return isNonEmptyString(queryActorId) ? queryActorId : null;
+}
+
+/**
+ * Resolves the acting account for a social request, preferring the
+ * authenticated identity.
+ *
+ * When the request passed through `requireAuth` or `optionalAuth` with a token,
+ * `req.auth` was produced by verifying that token, so its `userId` is the actor
+ * and no client supplied `actorId`, `userId` or `authorId` can override it. Only
+ * an unauthenticated request reaches the legacy explicit actor above, which is
+ * the shape the live smoke suites still send.
+ */
+export function readCurrentActorId(req: Request): string | null {
+  return req.auth?.userId ?? readActorId(req);
 }
 
 export function readPagination(req: Request): PaginationQuery | null {
