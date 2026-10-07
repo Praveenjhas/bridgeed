@@ -57,6 +57,12 @@ type ProfileUpdateResult =
 
 type ProfileBody = Record<string, unknown>;
 
+/** `page`/`limit` a listing route reads off the query string. */
+interface PaginationQuery {
+  page?: number;
+  limit?: number;
+}
+
 /** Trimmed text, or null when the caller sent nothing but whitespace. */
 function optionalText(value: string): string | null {
   const trimmed = value.trim();
@@ -66,6 +72,40 @@ function optionalText(value: string): string | null {
 
 export class StudentProfileController {
   constructor(private readonly studentProfileService: StudentProfileService) {}
+
+  /**
+   * One page of the public student directory, used by the Discover screen.
+   *
+   * The viewing student is taken from the token and excluded from the page, so a
+   * client cannot ask to be shown as somebody else's classmate. A read is always
+   * a page: an unparseable `page`/`limit` is a bad request rather than a silently
+   * clamped read.
+   */
+  listProfiles = async (req: Request, res: Response): Promise<void> => {
+    try {
+      const pagination = this.readPagination(req);
+
+      if (!pagination) {
+        res.status(400).json({
+          error: "page and limit must be positive integers",
+        });
+        return;
+      }
+
+      const directory = await this.studentProfileService.listStudentProfiles(
+        { page: pagination.page, limit: pagination.limit },
+        req.auth?.userId ?? null,
+      );
+
+      res.json(directory);
+    } catch (error) {
+      console.error(error);
+
+      res.status(500).json({
+        error: "Internal server error",
+      });
+    }
+  };
 
   /**
    * Legacy create path. The owner is taken from the request body, which is why
@@ -520,6 +560,36 @@ export class StudentProfileController {
    * Maps the two conflicts the service can raise onto 409 responses, so both
    * create paths report a taken handle and an existing profile identically.
    */
+  /**
+   * Reads `page`/`limit` into numbers. A value that is present but is not a
+   * positive integer makes the whole read invalid, so a typo is reported rather
+   * than answered with page one.
+   */
+  private readPagination(req: Request): PaginationQuery | null {
+    const page = this.readPositiveInteger(req.query.page);
+    const limit = this.readPositiveInteger(req.query.limit);
+
+    if (page === null || limit === null) {
+      return null;
+    }
+
+    return { page, limit };
+  }
+
+  private readPositiveInteger(value: unknown): number | undefined | null {
+    if (value === undefined) {
+      return undefined;
+    }
+
+    if (typeof value !== "string" || !/^[0-9]+$/.test(value.trim())) {
+      return null;
+    }
+
+    const parsed = Number.parseInt(value.trim(), 10);
+
+    return parsed > 0 ? parsed : null;
+  }
+
   private sendCreateError(error: unknown, res: Response): void {
     if (
       error instanceof Error &&

@@ -76,6 +76,20 @@ studentProfileRouter.put(
 );
 
 /**
+ * The public directory of students, used by the Discover screen.
+ *
+ * It is guarded because it names every account that has a profile; the viewing
+ * student is taken from the token and left out of the page. It is the one route
+ * in this router that reads `page`/`limit`, and it sits before `/:userId` so the
+ * empty path is never taken for an id.
+ */
+studentProfileRouter.get(
+  "/",
+  requireAuth,
+  studentProfileController.listProfiles,
+);
+
+/**
  * Legacy create path, kept for the live smoke scripts. It trusts the `userId` in
  * the body, which is exactly why the app uses `POST /me` instead.
  */

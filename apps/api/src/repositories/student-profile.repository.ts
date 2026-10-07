@@ -1,3 +1,4 @@
+import type { PageWindow } from "@bridgeed/shared";
 import type {
   StudentProfile,
   StudentProfileDetails,
@@ -79,6 +80,37 @@ export class StudentProfileRepository {
       skills: profile.skills.map((record) => toSkill(record.skill)),
       interests: profile.interests.map((record) => toInterest(record.interest)),
     };
+  }
+
+  /**
+   * One page of the public student directory, newest first.
+   *
+   * Discovery lists students rather than looking one up, so it reads profiles
+   * directly: there is no membership or connection filter, only the page window.
+   * The viewer's own profile is left out, because a student cannot connect with
+   * themselves.
+   */
+  async findDirectory(
+    window: PageWindow,
+    excludeUserId: string | null,
+  ): Promise<StudentProfile[]> {
+    const records = await prisma.studentProfile.findMany({
+      where: excludeUserId ? { userId: { not: excludeUserId } } : undefined,
+      orderBy: [{ createdAt: "desc" }, { userId: "asc" }],
+      skip: window.skip,
+      take: window.take,
+    });
+
+    return records
+      .map((record) => this.toStudentProfile(record))
+      .filter((profile): profile is StudentProfile => profile !== null);
+  }
+
+  /** Total number of students in the directory, excluding the viewer. */
+  async countDirectory(excludeUserId: string | null): Promise<number> {
+    return prisma.studentProfile.count({
+      where: excludeUserId ? { userId: { not: excludeUserId } } : undefined,
+    });
   }
 
   async findByUsername(username: string): Promise<StudentProfile | null> {

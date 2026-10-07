@@ -64,7 +64,7 @@ export default function TabsLayout() {
       />
       <Tabs.Screen
         name="connections"
-        options={tabOptions("Connections", "link-outline", "link")}
+        options={tabOptions("Students", "git-network-outline", "git-network")}
       />
       <Tabs.Screen
         name="profile"

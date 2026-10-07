@@ -14,7 +14,8 @@
     "smoke:feed": "tsx scripts/feed-smoke.ts",
     "smoke:auth": "tsx scripts/auth-smoke.ts",
     "smoke:profile": "tsx scripts/profile-smoke.ts",
-    "smoke:feed-loop": "tsx scripts/feed-loop-smoke.ts"
+    "smoke:feed-loop": "tsx scripts/feed-loop-smoke.ts",
+    "smoke:connection": "tsx scripts/connection-smoke.ts"
   },
   "dependencies": {
     "@prisma/adapter-pg": "^7.10.0",

@@ -1,3 +1,4 @@
+import type { Paginated } from "@bridgeed/shared";
 import type {
   StudentProfile,
   StudentProfileDetails,
@@ -5,6 +6,12 @@ import type {
 import type { University } from "@bridgeed/shared/src/types/university";
 import { StudentProfileRepository } from "../repositories/student-profile.repository";
 import { UniversityRepository } from "../repositories/university.repository";
+import {
+  normalizeLimit,
+  normalizePage,
+  toPageWindow,
+  toPaginated,
+} from "../utils/pagination";
 import { StudentSkillService } from "./student-skill.service";
 import { StudentInterestService } from "./student-interest.service";
 
@@ -37,6 +44,12 @@ export interface UpdateStudentProfileInput {
   branch?: string | null;
   graduationYear?: number | null;
   location?: string | null;
+}
+
+/** The page window the Discover screen asks the directory for. */
+export interface ListStudentProfilesQuery {
+  page?: number;
+  limit?: number;
 }
 
 /** Raised when an update names a university that does not exist. */
@@ -88,6 +101,29 @@ export class StudentProfileService {
 
   async getProfileByUserId(userId: string): Promise<StudentProfile | null> {
     return this.studentProfileRepository.findByUserId(userId);
+  }
+
+  /**
+   * One page of the public student directory, used by Discover.
+   *
+   * It is a plain, newest-first list: no ranking and no search index, only the
+   * page window the caller asked for. The viewer's own profile is excluded so the
+   * list is always other students.
+   */
+  async listStudentProfiles(
+    query: ListStudentProfilesQuery,
+    excludeUserId: string | null,
+  ): Promise<Paginated<StudentProfile>> {
+    const page = normalizePage(query.page);
+    const limit = normalizeLimit(query.limit);
+    const window = toPageWindow(page, limit);
+
+    const [items, total] = await Promise.all([
+      this.studentProfileRepository.findDirectory(window, excludeUserId),
+      this.studentProfileRepository.countDirectory(excludeUserId),
+    ]);
+
+    return toPaginated(items, page, limit, total);
   }
 
   /**

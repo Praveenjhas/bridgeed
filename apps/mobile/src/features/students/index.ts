@@ -5,6 +5,7 @@ export {
   fetchInterests,
   fetchMyStudentProfile,
   fetchSkills,
+  fetchStudentDirectory,
   fetchStudentInterests,
   fetchStudentProfile,
   fetchStudentSkills,
@@ -19,6 +20,7 @@ export {
   type CreateMyStudentProfileParams,
   type FetchCatalogParams,
   type FetchMyStudentProfileParams,
+  type FetchStudentDirectoryParams,
   type FetchStudentInterestsParams,
   type FetchStudentProfileParams,
   type FetchStudentSkillsParams,
@@ -28,6 +30,8 @@ export {
   type UpdateMyStudentProfileInput,
   type UpdateMyStudentProfileParams,
 } from "./api/students.api";
+
+export { STUDENT_DIRECTORY_PAGE_LIMIT } from "./constants";
 
 export {
   formatCourse,
@@ -43,6 +47,11 @@ export {
   useStudentProfiles,
   type StudentProfilesState,
 } from "./hooks/useStudentProfiles";
+export {
+  useStudentDirectory,
+  type DirectoryStudent,
+  type StudentDirectoryState,
+} from "./hooks/useStudentDirectory";
 export {
   useStudentSkills,
   type StudentSkillsState,
@@ -64,4 +73,5 @@ export {
   StudentIdentity,
   type StudentIdentityProps,
 } from "./components/StudentIdentity";
+export { StudentCard, type StudentCardProps } from "./components/StudentCard";
 export { TagList, type TagListProps } from "./components/TagList";

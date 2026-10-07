@@ -10,7 +10,6 @@ import { router } from "expo-router";
 import type { Connection, StudentProfile } from "@bridgeed/shared";
 import {
   AppText,
-  Button,
   EmptyState,
   ErrorState,
   Icon,
@@ -30,17 +29,24 @@ import {
   useConnectionRequests,
   useConnections,
 } from "@/features/connections";
-import { useStudentProfiles } from "@/features/students";
+import { FeedListFooter } from "@/features/feed";
+import {
+  StudentCard,
+  useStudentDirectory,
+  useStudentProfiles,
+  type DirectoryStudent,
+} from "@/features/students";
 import { useActor } from "@/providers/AuthProvider";
 import { useTheme } from "@/theme";
 
 /**
- * Matches a student against the search field.
+ * Matches a student against the search field, on any text a reader sees.
  *
- * This filters the connections that have already been loaded; it never asks the
- * API for a match, because the connection endpoints take no search term. A
- * caption under the field says as much, so nobody assumes a student further down
- * the list was checked.
+ * This filters what has already been loaded — the reader's connections, the
+ * requests they have received and the directory page or two fetched so far — and
+ * never asks the API for a match, because the directory endpoint takes no search
+ * term. Captions under each list say as much, so nobody assumes a student
+ * further down the directory was checked.
  */
 function matchesSearch(
   profile: StudentProfile | null | undefined,
@@ -54,7 +60,12 @@ function matchesSearch(
     return false;
   }
 
-  return [profile.name, profile.username]
+  return [
+    profile.name,
+    profile.username,
+    profile.degree ?? "",
+    profile.branch ?? "",
+  ]
     .join(" ")
     .toLowerCase()
     .includes(query);
@@ -119,35 +130,39 @@ function SearchField({
 }
 
 /**
- * Connections tab: the reader's social graph, on one screen.
+ * Students tab: the reader's social graph and the whole directory, on one screen.
  *
- * It answers two questions in the order a student asks them: who am I connected
- * to, and who is waiting on me. Both come from the connection endpoints for the
- * configured actor — the accepted list and the received requests — and the people
- * in them are resolved through the student profile API, because a connection row
- * only holds ids.
+ * It answers the three questions a student asks in order. Who wants to connect
+ * with me, who am I already connected to, and who else is here that I have not
+ * met. The first two are bounded, personal lists and are rendered in the header;
+ * the directory is the one that can grow without bound and is therefore the list
+ * the screen itself virtualises, exactly like the community tab.
  *
- * Every change goes through `useConnectionActions`, which disables only the row it
- * is working on and asks the screen to re-read once the API has answered, so the
- * badges and buttons always describe the stored relationship rather than the tap
- * that was just made.
+ * Every relationship change goes through `useConnectionActions`, which disables
+ * only the row it is working on and asks the screen to re-read once the API has
+ * answered, so the badges and buttons describe the stored relationship rather
+ * than the tap that was just made.
  */
-export default function ConnectionsScreen() {
+export default function StudentsScreen() {
   const { colors, layout, spacing } = useTheme();
   const { actorId, isConfigured, detail: actorDetail } = useActor();
   const api = useMemo(() => resolveApiBaseUrl(), []);
+
   const connections = useConnections(actorId);
   const requests = useConnectionRequests(actorId);
+  const directory = useStudentDirectory(actorId);
   const [search, setSearch] = useState("");
 
   const query = search.trim().toLowerCase();
   const { refresh: refreshConnections } = connections;
   const { refresh: refreshRequests } = requests;
+  const { refresh: refreshDirectory } = directory;
 
   const refreshAll = useCallback(() => {
     refreshConnections();
     refreshRequests();
-  }, [refreshConnections, refreshRequests]);
+    refreshDirectory();
+  }, [refreshConnections, refreshDirectory, refreshRequests]);
 
   const actions = useConnectionActions({ actorId, onChanged: refreshAll });
 
@@ -188,6 +203,11 @@ export default function ConnectionsScreen() {
     [actorId, profileMap, query, requests.requests],
   );
 
+  const visibleStudents = useMemo(
+    () => directory.students.filter((student) => matchesSearch(student, query)),
+    [directory.students, query],
+  );
+
   const openStudent = useCallback((studentId: string) => {
     router.push({
       pathname: "/student/[studentId]",
@@ -195,32 +215,28 @@ export default function ConnectionsScreen() {
     });
   }, []);
 
-  const renderConnection = useCallback(
-    ({ item }: { item: Connection }) => {
-      const studentId = otherParticipantId(item, actorId ?? "");
-
-      return (
-        <ConnectionCard
-          studentId={studentId}
-          profile={profileMap.get(studentId) ?? null}
-          onPress={openStudent}
-        />
-      );
-    },
-    [actorId, openStudent, profileMap],
+  const renderStudent = useCallback(
+    ({ item }: { item: DirectoryStudent }) => (
+      <StudentCard profile={item} onPress={openStudent} />
+    ),
+    [openStudent],
   );
 
   const header = (
     <PageHeader
-      title="Connections"
-      subtitle="Your network on BridgeEd"
+      title="Students"
+      subtitle="Find classmates, and manage your network"
       showWordmark
       actions={
         <IconButton
           icon="refresh"
-          accessibilityLabel="Refresh connections"
+          accessibilityLabel="Refresh students"
           onPress={refreshAll}
-          disabled={connections.isRefreshing || requests.isRefreshing}
+          disabled={
+            connections.isRefreshing ||
+            requests.isRefreshing ||
+            directory.isRefreshing
+          }
         />
       }
     />
@@ -233,108 +249,14 @@ export default function ConnectionsScreen() {
         <EmptyState
           icon="settings-outline"
           title="Tell the app who you are"
-          message={
-            api.baseUrl ? actorDetail : `${actorDetail}\n\n${api.detail}`
-          }
+          message={api.baseUrl ? actorDetail : `${actorDetail}\n\n${api.detail}`}
         />
       </Screen>
     );
   }
 
-  /**
-   * The first load is only finished once the connections and the people they name
-   * have both arrived. Showing cards before that would print "profile unavailable"
-   * on rows that are simply still loading.
-   */
-  const isLoadingFirstPage =
-    (connections.status === "loading" &&
-      connections.connections.length === 0) ||
-    (connections.connections.length > 0 &&
-      profiles.status === "loading" &&
-      profileMap.size === 0);
-
-  const connectionsPlaceholder = (() => {
-    if (isLoadingFirstPage) {
-      return <SkeletonList count={3} />;
-    }
-
-    if (
-      connections.status === "error" &&
-      connections.connections.length === 0
-    ) {
-      return (
-        <ErrorState
-          message={
-            connections.errorMessage ?? "Your connections could not be loaded."
-          }
-          onRetry={refreshAll}
-        />
-      );
-    }
-
-    if (query.length > 0) {
-      return (
-        <EmptyState
-          icon="search-outline"
-          title="No matching connections"
-          message={`None of your connections match "${search.trim()}". Clear the search to see everyone.`}
-        />
-      );
-    }
-
-    return (
-      <EmptyState
-        icon="git-network-outline"
-        title="Build your BridgeEd network"
-        message="Connections are the students you know: their posts rank higher in your feed, and they appear first in your communities. Open a community, find a classmate and send them a request."
-        action={<Button label="Refresh" icon="refresh" onPress={refreshAll} />}
-      />
-    );
-  })();
-
-  const listHeader = (
-    <View style={{ gap: spacing.md }}>
-      <View style={{ gap: spacing.sm }}>
-        <SearchField
-          value={search}
-          placeholder="Search students"
-          onChangeText={setSearch}
-          onClear={() => setSearch("")}
-        />
-        {query.length > 0 ? (
-          <AppText variant="caption" tone="muted">
-            {`Filtering the ${connections.connections.length} connections loaded so far.`}
-          </AppText>
-        ) : null}
-      </View>
-
-      {actions.actionErrorMessage ? (
-        <InlineError
-          message={actions.actionErrorMessage}
-          onDismiss={actions.dismissActionError}
-        />
-      ) : null}
-
-      <SectionHeading
-        title="My connections"
-        hint={
-          connections.connections.length === 0
-            ? undefined
-            : query.length > 0
-              ? `${visibleConnections.length} of ${connections.connections.length} shown`
-              : `${connections.connections.length} connected`
-        }
-      />
-    </View>
-  );
-
-  /**
-   * Incoming requests sit below the accepted list, in the footer, because the
-   * accepted list is the one that can grow without bound and is therefore the one
-   * the list itself virtualises. Requests are a bounded, personal queue.
-   */
-  const listFooter = (
-    <View style={{ gap: layout.listGap, paddingTop: spacing.lg }}>
+  const requestsSection = (
+    <View style={{ gap: layout.listGap }}>
       <SectionHeading
         title="Connection requests"
         hint={
@@ -363,7 +285,7 @@ export default function ConnectionsScreen() {
             ? "Loading your requests"
             : query.length > 0
               ? "No pending requests match this search."
-              : "No pending requests."}
+              : "No connection requests."}
         </AppText>
       ) : (
         visibleRequests.map((request) => {
@@ -386,25 +308,162 @@ export default function ConnectionsScreen() {
     </View>
   );
 
+  const connectionsSection = (
+    <View style={{ gap: layout.listGap }}>
+      <SectionHeading
+        title="My connections"
+        hint={
+          connections.connections.length === 0
+            ? undefined
+            : query.length > 0
+              ? `${visibleConnections.length} of ${connections.connections.length} shown`
+              : `${connections.connections.length} connected`
+        }
+      />
+
+      {connections.status === "error" &&
+      connections.connections.length === 0 ? (
+        <InlineError
+          message={
+            connections.errorMessage ?? "Your connections could not be loaded."
+          }
+          onRetry={refreshConnections}
+          retryLabel="Try again"
+        />
+      ) : null}
+
+      {visibleConnections.length === 0 ? (
+        <AppText variant="caption" tone="muted">
+          {connections.status === "loading"
+            ? "Loading your connections"
+            : query.length > 0
+              ? "None of your connections match this search."
+              : "You haven't connected with anyone yet."}
+        </AppText>
+      ) : (
+        visibleConnections.map((connection) => {
+          const studentId = otherParticipantId(connection, actorId ?? "");
+
+          return (
+            <ConnectionCard
+              key={connection.id}
+              studentId={studentId}
+              profile={profileMap.get(studentId) ?? null}
+              onPress={openStudent}
+            />
+          );
+        })
+      )}
+    </View>
+  );
+
+  const listHeader = (
+    <View style={{ gap: layout.listGap }}>
+      <View style={{ gap: spacing.sm }}>
+        <SearchField
+          value={search}
+          placeholder="Search students"
+          onChangeText={setSearch}
+          onClear={() => setSearch("")}
+        />
+        {query.length > 0 ? (
+          <AppText variant="caption" tone="muted">
+            {`Filtering your requests, connections and the ${directory.students.length} students loaded so far.`}
+          </AppText>
+        ) : null}
+      </View>
+
+      {actions.actionErrorMessage ? (
+        <InlineError
+          message={actions.actionErrorMessage}
+          onDismiss={actions.dismissActionError}
+        />
+      ) : null}
+
+      {requestsSection}
+      {connectionsSection}
+
+      <SectionHeading
+        title="Discover students"
+        hint={
+          directory.total !== null
+            ? `${visibleStudents.length} shown of ${directory.total}`
+            : undefined
+        }
+      />
+    </View>
+  );
+
+  const discoverPlaceholder = (() => {
+    if (directory.status === "loading" && directory.students.length === 0) {
+      return <SkeletonList count={3} />;
+    }
+
+    if (directory.status === "error" && directory.students.length === 0) {
+      return (
+        <ErrorState
+          message={
+            directory.errorMessage ?? "The student directory was not loaded."
+          }
+          onRetry={refreshDirectory}
+        />
+      );
+    }
+
+    if (query.length > 0) {
+      return (
+        <EmptyState
+          icon="search-outline"
+          title="No matching students"
+          message={`Nothing in the students loaded so far matches "${search.trim()}". Clear the search to see the whole directory.`}
+        />
+      );
+    }
+
+    return (
+      <EmptyState
+        icon="people-outline"
+        title="No students found."
+        message="Students who join BridgeEd show up here, with their university and course."
+      />
+    );
+  })();
+
   return (
     <Screen>
       {header}
       <FlatList
-        data={visibleConnections}
-        keyExtractor={(item) => item.id}
-        renderItem={renderConnection}
+        data={visibleStudents}
+        keyExtractor={(item) => item.userId}
+        renderItem={renderStudent}
         initialNumToRender={8}
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="on-drag"
+        onEndReached={directory.loadMore}
+        onEndReachedThreshold={0.5}
         refreshControl={
           <RefreshControl
-            refreshing={connections.isRefreshing || requests.isRefreshing}
+            refreshing={
+              connections.isRefreshing ||
+              requests.isRefreshing ||
+              directory.isRefreshing
+            }
             onRefresh={refreshAll}
             tintColor={colors.accent}
             colors={[colors.accent]}
           />
         }
         ListHeaderComponent={listHeader}
-        ListEmptyComponent={connectionsPlaceholder}
-        ListFooterComponent={listFooter}
+        ListEmptyComponent={discoverPlaceholder}
+        ListFooterComponent={
+          <FeedListFooter
+            isLoadingMore={directory.isLoadingMore}
+            hasMore={directory.hasMore}
+            itemCount={visibleStudents.length}
+            loadingLabel="Loading more students"
+            endLabel="You have seen every student."
+          />
+        }
         contentContainerStyle={{
           padding: layout.screenPadding,
           gap: layout.listGap,

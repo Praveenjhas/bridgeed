@@ -1,9 +1,12 @@
-import type {
-  Interest,
-  Skill,
-  StudentProfile,
-  StudentProfileDetails,
-  University,
+import {
+  DEFAULT_PAGE,
+  DEFAULT_PAGE_SIZE,
+  type Interest,
+  type Paginated,
+  type Skill,
+  type StudentProfile,
+  type StudentProfileDetails,
+  type University,
 } from "@bridgeed/shared";
 import { apiClient, ApiError } from "@/services/api";
 
@@ -29,6 +32,32 @@ export async function fetchStudentProfile({
     `/student-profiles/${encodeURIComponent(userId)}`,
     { signal },
   );
+}
+
+export interface FetchStudentDirectoryParams {
+  /** One based page number, matching the API's paged listings. */
+  page?: number;
+  limit?: number;
+  signal?: AbortSignal;
+}
+
+/**
+ * Reads one page of the student directory, which is what Discover shows.
+ *
+ * It is a plain, newest-first list of students other than the reader: no ranking
+ * and no search term, only the page window. The reader is taken by the API from
+ * the bearer token and left out of the page, so the list is always "other
+ * students". This is the one students endpoint that is paged and authenticated.
+ */
+export async function fetchStudentDirectory({
+  page = DEFAULT_PAGE,
+  limit = DEFAULT_PAGE_SIZE,
+  signal,
+}: FetchStudentDirectoryParams = {}): Promise<Paginated<StudentProfile>> {
+  return apiClient.get<Paginated<StudentProfile>>("/student-profiles", {
+    query: { page, limit },
+    signal,
+  });
 }
 
 export interface FetchUniversityParams {
