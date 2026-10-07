@@ -1,9 +1,10 @@
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import type { FeedItem } from "@bridgeed/shared";
 import { usePaginatedList } from "@/hooks/usePaginatedList";
 import { likePost, unlikePost } from "@/features/reactions";
 import { toUserMessage } from "@/utils/errors";
 import { fetchFeedPage } from "../api/feed.api";
+import { subscribeToFeedRefresh } from "../feed-refresh";
 
 /**
  * Page size for the mobile feed.
@@ -87,6 +88,11 @@ export function useFeed(actorId: string | null): FeedState {
   });
 
   const { updateItems } = list;
+
+  // The composer announces a new post through this channel, so a post written on
+  // the pushed compose screen is on the feed the moment the reader returns,
+  // without the feed having to re-rank everything on every focus.
+  useEffect(() => subscribeToFeedRefresh(list.refresh), [list.refresh]);
 
   const patchItem = useCallback(
     (postId: string, patch: Partial<FeedItem>) => {

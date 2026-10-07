@@ -149,6 +149,10 @@ function RootNavigator() {
           name="profile/edit"
           options={{ ...detailScreenOptions, title: "Edit profile" }}
         />
+        <Stack.Screen
+          name="create-post"
+          options={{ ...detailScreenOptions, title: "Create post" }}
+        />
       </Stack.Protected>
 
       {/*

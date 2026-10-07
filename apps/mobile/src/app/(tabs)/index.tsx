@@ -14,6 +14,7 @@ import {
 } from "@/components";
 import { resolveApiBaseUrl } from "@/config/env";
 import {
+  FeedComposePrompt,
   FeedListFooter,
   FeedSummary,
   PostCard,
@@ -39,6 +40,10 @@ export default function FeedScreen() {
     router.push({ pathname: "/post/[postId]", params: { postId: item.id } });
   }, []);
 
+  const openCreatePost = useCallback(() => {
+    router.push("/create-post");
+  }, []);
+
   const renderItem = useCallback(
     ({ item }: { item: FeedItem }) => (
       <PostCard
@@ -54,19 +59,22 @@ export default function FeedScreen() {
   const header = (
     <PageHeader
       title="Feed"
-      subtitle={
-        actorId
-          ? `Ranked for you · acting as ${actorId.slice(0, 8)}…`
-          : "Ranked for you"
-      }
+      subtitle="Ranked from your communities, connections and skills"
       showWordmark
       actions={
-        <IconButton
-          icon="refresh"
-          accessibilityLabel="Refresh the feed"
-          onPress={feed.refresh}
-          disabled={feed.isRefreshing}
-        />
+        <>
+          <IconButton
+            icon="add"
+            accessibilityLabel="Create a post"
+            onPress={openCreatePost}
+          />
+          <IconButton
+            icon="refresh"
+            accessibilityLabel="Refresh the feed"
+            onPress={feed.refresh}
+            disabled={feed.isRefreshing}
+          />
+        </>
       }
     />
   );
@@ -118,7 +126,19 @@ export default function FeedScreen() {
           title="Nothing in your feed yet"
           message="The feed is built from the communities you belong to, your connections and your skills. Join a community or add a connection, then refresh."
           action={
-            <Button label="Refresh" icon="refresh" onPress={feed.refresh} />
+            <View style={{ gap: spacing.sm }}>
+              <Button
+                label="Create a post"
+                icon="add"
+                onPress={openCreatePost}
+              />
+              <Button
+                label="Refresh"
+                icon="refresh"
+                variant="secondary"
+                onPress={feed.refresh}
+              />
+            </View>
           }
         />
       </Screen>
@@ -145,6 +165,7 @@ export default function FeedScreen() {
         }
         ListHeaderComponent={
           <View style={{ gap: layout.listGap }}>
+            <FeedComposePrompt onPress={openCreatePost} />
             {feed.pageMeta ? <FeedSummary meta={feed.pageMeta} /> : null}
             {feed.actionErrorMessage ? (
               <InlineError
