@@ -1,7 +1,52 @@
+import { randomUUID } from "node:crypto";
 import type { University } from "@bridgeed/shared/src/types/university";
 import { prisma } from "../config/prisma";
 
+/** Longest slug the repository will generate, so a long name cannot bloat it. */
+const MAXIMUM_SLUG_LENGTH = 80;
+
+/** How many `-2`, `-3`, … suffixes to try before falling back to a random one. */
+const MAXIMUM_SLUG_ATTEMPTS = 20;
+
+/**
+ * Turns a university name into the URL-safe identifier stored in `slug`:
+ * accents folded away, lowercased, and every run of other characters collapsed
+ * into a single dash.
+ */
+export function toUniversitySlug(name: string): string {
+  return name
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, MAXIMUM_SLUG_LENGTH);
+}
+
 export class UniversityRepository {
+  /**
+   * Picks a slug no other university holds yet. The name keeps its slug stable
+   * once it exists; only the first row with a given name gets the bare slug.
+   */
+  private async allocateSlug(name: string): Promise<string> {
+    const base = toUniversitySlug(name) || "university";
+
+    for (let attempt = 1; attempt <= MAXIMUM_SLUG_ATTEMPTS; attempt += 1) {
+      const candidate = attempt === 1 ? base : `${base}-${attempt}`;
+      const existing = await prisma.university.findUnique({
+        where: {
+          slug: candidate,
+        },
+      });
+
+      if (!existing) {
+        return candidate;
+      }
+    }
+
+    return `${base}-${randomUUID().slice(0, 8)}`;
+  }
+
   private toUniversity(
     university: Awaited<ReturnType<typeof prisma.university.findUnique>>,
   ): University | null {
@@ -45,15 +90,19 @@ export class UniversityRepository {
   }
 
   async create(university: University): Promise<University> {
+    const slug = await this.allocateSlug(university.name);
+
     const createdUniversity = await prisma.university.create({
       data: {
         id: university.id,
         name: university.name,
+        slug,
         country: university.country,
         state: university.state,
         city: university.city,
         websiteUrl: university.websiteUrl,
         verified: university.verified,
+        verifiedAt: university.verified ? new Date() : null,
       },
     });
 

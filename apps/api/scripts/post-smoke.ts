@@ -248,7 +248,7 @@ async function createStudent(
 ): Promise<string> {
   const userResult = await api("POST", "/users", {
     email: `${RUN_ID}-${label}@bridgeed-smoke.test`,
-    role: "STUDENT",
+    role: "USER",
   });
 
   const userId = await requireCreatedId(

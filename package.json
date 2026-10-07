@@ -9,6 +9,10 @@
     "packages/shared"
   ],
   "scripts": {
+    "start": "npm run start --workspace mobile",
+    "android": "npm run android --workspace mobile",
+    "ios": "npm run ios --workspace mobile",
+    "web": "npm run web --workspace mobile",
     "dev": "npm run dev --workspaces",
     "typecheck": "npm run typecheck --workspaces",
     "lint": "npm run lint --workspaces",

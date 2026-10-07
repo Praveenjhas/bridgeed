@@ -7,13 +7,56 @@ datasource db {
   provider = "postgresql"
 }
 
+/// An account owns the credentials and the authorisation role; what a student
+/// studies lives on StudentProfile. `role` only decides whether an account may
+/// administer the platform, so it stays deliberately coarse.
 model User {
-  id             String          @id @default(uuid())
-  email          String          @unique
-  role           UserRole
-  createdAt      DateTime        @default(now())
-  updatedAt      DateTime        @updatedAt
-  studentProfile StudentProfile?
+  id                String          @id @default(uuid())
+  email             String          @unique
+  role              UserRole        @default(USER)
+  status            UserStatus      @default(ACTIVE)
+  /// scrypt digest of the password. Null while an account exists without a
+  /// usable password, which is the case for every row created before sign-up.
+  passwordHash      String?
+  /// When the password last changed, so sessions issued before that moment can
+  /// be treated as stale.
+  passwordUpdatedAt DateTime?
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+  sessions          Session[]
+  studentProfile    StudentProfile?
+}
+
+/// Refresh-token sessions. Access tokens are stateless and short lived, so they
+/// are never stored; a refresh token is an opaque secret and only its SHA-256
+/// digest is persisted. Rotating a refresh token revokes the session it
+/// belonged to and issues a successor that keeps the same `familyId`, which is
+/// what makes reuse detectable: a token whose session is already revoked can
+/// only have been paired with a token that leaked, so the whole family is
+/// revoked.
+model Session {
+  id               String    @id @default(uuid())
+  userId           String
+  familyId         String
+  refreshTokenHash String    @unique
+  userAgent        String?
+  ipAddress        String?
+  expiresAt        DateTime
+  revokedAt        DateTime?
+  /// Last time this session minted an access token, used for idle timeouts and
+  /// for showing the user where they are signed in.
+  lastUsedAt       DateTime?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+  user             User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  /// Sessions are read per user (everything a sign-out-all has to revoke) and
+  /// per family (one rotation chain), always filtering on `revokedAt IS NULL`,
+  /// so the user index carries that column. A family chain is only a handful of
+  /// rows, so its index stays single-column. `expiresAt` is read from the row
+  /// already located by `refreshTokenHash`, so it needs no index of its own.
+  @@index([userId, revokedAt])
+  @@index([familyId])
 }
 
 model StudentProfile {
@@ -43,16 +86,23 @@ model StudentProfile {
   commentReactions     CommentReaction[]     @relation("CommentReactionUser")
   postReactions        PostReaction[]        @relation("PostReactionUser")
   posts                Post[]                @relation("PostAuthor")
+
+  @@index([universityId])
 }
 
 model University {
   id         String           @id @default(uuid())
   name       String
+  /// Stable URL-safe identifier derived from `name` when the row is created.
+  slug       String           @unique
   country    String
   state      String?
   city       String?
   websiteUrl String?
   verified   Boolean          @default(false)
+  /// Timestamp of the moment `verified` became true, so a future review trail
+  /// does not have to guess from `updatedAt`. Null while unverified.
+  verifiedAt DateTime?
   createdAt  DateTime         @default(now())
   updatedAt  DateTime         @updatedAt
   students   StudentProfile[]
@@ -218,11 +268,20 @@ model CommentReaction {
   @@index([userId])
 }
 
+/// Authorisation roles only: whether an account may administer the platform.
+/// Mentor and educator standing is profile data, not an account role.
 enum UserRole {
-  STUDENT
-  MENTOR
-  EDUCATOR
+  USER
   ADMIN
+}
+
+/// Account lifecycle. DELETED is a soft delete: sessions are revoked, but the
+/// content the account authored stays readable so community history holds
+/// together.
+enum UserStatus {
+  ACTIVE
+  SUSPENDED
+  DELETED
 }
 
 enum ConnectionStatus {

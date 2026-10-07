@@ -225,7 +225,7 @@ async function createStudent(
 ): Promise<string> {
   const userResult = await api("POST", "/users", {
     email: `${RUN_ID}-${label}@bridgeed-smoke.test`,
-    role: "STUDENT",
+    role: "USER",
   });
 
   const userId = await requireCreatedId(
@@ -799,7 +799,7 @@ async function runPublicJoinChecks(
 
   const ghostUser = await api("POST", "/users", {
     email: `${RUN_ID}-ghost@bridgeed-smoke.test`,
-    role: USER_ROLES.STUDENT,
+    role: USER_ROLES.USER,
   });
   const ghostUserId = await requireCreatedId("setup: create user ghost", ghostUser, 201);
 
@@ -1748,7 +1748,7 @@ async function runRegressionChecks(
 
   const ownerUser = await api("GET", `/users/${users.owner}`);
   expectStatus("regression: user by id", ownerUser, 200);
-  expectEqual("regression: user role", readString(ownerUser.body, "role"), USER_ROLES.STUDENT);
+  expectEqual("regression: user role", readString(ownerUser.body, "role"), USER_ROLES.USER);
   expectTrue(
     "regression: user email carries the run prefix",
     (readString(ownerUser.body, "email") ?? "").startsWith(RUN_ID),
