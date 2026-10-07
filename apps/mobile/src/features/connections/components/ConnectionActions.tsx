@@ -182,7 +182,7 @@ export function ConnectionActions({
             />
             <Button
               label="Decline"
-              variant="secondary"
+              variant="destructive"
               accessibilityLabel="Decline connection request"
               disabled={isActionPending}
               onPress={confirmDecline}
@@ -203,7 +203,7 @@ export function ConnectionActions({
         {state === RELATIONSHIP_STATES.ACCEPTED ? (
           <Button
             label="Remove connection"
-            variant="secondary"
+            variant="destructive"
             icon="trash-outline"
             accessibilityLabel="Remove connection"
             loading={isActionPending}
@@ -214,7 +214,7 @@ export function ConnectionActions({
         {canBlock ? (
           <Button
             label="Block"
-            variant="secondary"
+            variant="destructive"
             icon="ban-outline"
             accessibilityLabel="Block user"
             disabled={isActionPending}

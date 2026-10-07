@@ -113,7 +113,7 @@ export function JoinRequestsCard({
                   <Button
                     label="Decline"
                     size="sm"
-                    variant="secondary"
+                    variant="destructive"
                     disabled={pendingMembershipIds.has(request.id)}
                     onPress={() => onDecide(request.id, "reject")}
                   />

@@ -8,7 +8,7 @@ import {
 } from "@bridgeed/shared";
 import {
   Button,
-  Card,
+  Divider,
   EmptyState,
   ErrorState,
   LoadingState,
@@ -193,9 +193,7 @@ export default function CommunityMembersScreen() {
         data={members.members}
         keyExtractor={(item) => item.id}
         renderItem={({ item }: { item: CommunityMember }) => (
-          <Card>
-            <MemberRow member={item} />
-          </Card>
+          <MemberRow member={item} />
         )}
         initialNumToRender={8}
         onEndReached={members.loadMore}
@@ -252,9 +250,10 @@ export default function CommunityMembersScreen() {
             endLabel="That is everyone in this community."
           />
         }
+        ItemSeparatorComponent={() => <Divider />}
         contentContainerStyle={{
           padding: layout.screenPadding,
-          gap: spacing.md,
+          gap: spacing.none,
           paddingBottom: spacing.xxl,
         }}
       />

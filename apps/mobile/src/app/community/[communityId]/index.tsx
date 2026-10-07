@@ -8,9 +8,7 @@ import {
 } from "@bridgeed/shared";
 import {
   AppText,
-  Badge,
   Button,
-  Card,
   Divider,
   EmptyState,
   ErrorState,
@@ -20,7 +18,6 @@ import {
   SkeletonList,
 } from "@/components";
 import {
-  COMMUNITY_TYPE_TONES,
   CommunityMembersPreview,
   CommunityPostComposer,
   MEMBERS_PREVIEW_LIMIT,
@@ -307,50 +304,47 @@ export default function CommunityDetailScreen() {
 
   const communityHeader = (
     <View style={{ gap: spacing.lg }}>
-      <Card>
-        <View style={{ gap: spacing.md }}>
-          <View style={[styles.titleRow, { gap: spacing.sm }]}>
-            <AppText variant="title" style={styles.title}>
-              {detail.name}
-            </AppText>
-            <Badge
-              label={communityTypeLabel(detail.type)}
-              tone={COMMUNITY_TYPE_TONES[detail.type]}
-            />
-          </View>
+      {/* The community's identity, laid out flat like a masthead rather than a
+          giant hero card: name, the facts, then the one membership action. */}
+      <View style={{ gap: spacing.md }}>
+        <AppText variant="title">{detail.name}</AppText>
 
-          {detail.description ? <AppText>{detail.description}</AppText> : null}
+        <AppText variant="caption" tone="muted">
+          {[
+            communityTypeLabel(detail.type),
+            canSeeMembers && members.total !== null
+              ? formatMemberCount(members.total)
+              : null,
+          ]
+            .filter((part): part is string => part !== null)
+            .join(" · ")}
+        </AppText>
 
-          {canSeeMembers && members.total !== null ? (
-            <AppText variant="caption" tone="muted">
-              {formatMemberCount(members.total)}
-            </AppText>
-          ) : null}
+        {detail.description ? (
+          <AppText tone="secondary">{detail.description}</AppText>
+        ) : null}
 
-          <Divider />
+        <Divider spacing="sm" />
 
-          <MembershipActions
-            communityType={detail.type}
-            membership={membership.membership}
-            isChecking={
-              membership.status === "loading" && !membership.membership
-            }
-            readErrorMessage={
-              membership.status === "error" && !membership.membership
-                ? membership.errorMessage
-                : null
-            }
-            onRetryRead={refreshMembership}
-            canRequestJoin={membership.canRequestJoin}
-            canLeave={membership.canLeave}
-            isActionPending={membership.isActionPending}
-            actionErrorMessage={membership.actionErrorMessage}
-            onDismissActionError={membership.dismissActionError}
-            onJoin={membership.join}
-            onLeave={membership.leave}
-          />
-        </View>
-      </Card>
+        <MembershipActions
+          communityType={detail.type}
+          membership={membership.membership}
+          isChecking={membership.status === "loading" && !membership.membership}
+          readErrorMessage={
+            membership.status === "error" && !membership.membership
+              ? membership.errorMessage
+              : null
+          }
+          onRetryRead={refreshMembership}
+          canRequestJoin={membership.canRequestJoin}
+          canLeave={membership.canLeave}
+          isActionPending={membership.isActionPending}
+          actionErrorMessage={membership.actionErrorMessage}
+          onDismissActionError={membership.dismissActionError}
+          onJoin={membership.join}
+          onLeave={membership.leave}
+        />
+      </View>
 
       {canSeeMembers ? (
         <CommunityMembersPreview
@@ -359,15 +353,13 @@ export default function CommunityDetailScreen() {
           onSeeAll={openMembers}
         />
       ) : (
-        <Card>
-          <View style={{ gap: spacing.sm }}>
-            <SectionHeading title="Members" />
-            <AppText variant="caption" tone="muted">
-              This community is private, so its member list is only visible to
-              its members.
-            </AppText>
-          </View>
-        </Card>
+        <View style={{ gap: spacing.sm }}>
+          <SectionHeading title="Members" />
+          <AppText variant="caption" tone="muted">
+            This community is private, so its member list is only visible to its
+            members.
+          </AppText>
+        </View>
       )}
 
       <SectionHeading
@@ -390,7 +382,9 @@ export default function CommunityDetailScreen() {
         ref={listRef}
         data={visiblePosts}
         keyExtractor={(item) => item.id}
-        renderItem={({ item }) => <PostCard item={item} onOpen={openPost} />}
+        renderItem={({ item }) => (
+          <PostCard item={item} variant="flat" onOpen={openPost} />
+        )}
         initialNumToRender={4}
         keyboardShouldPersistTaps="handled"
         automaticallyAdjustKeyboardInsets
@@ -420,9 +414,11 @@ export default function CommunityDetailScreen() {
             endLabel={`You have reached the end of ${detail.name}.`}
           />
         }
+        // Posts share the screen gutter and are separated by a hairline, so the
+        // community reads as one column: identity, then discussion.
+        ItemSeparatorComponent={() => <Divider />}
         contentContainerStyle={{
           padding: layout.screenPadding,
-          gap: spacing.lg,
           paddingBottom: spacing.xxl,
         }}
       />

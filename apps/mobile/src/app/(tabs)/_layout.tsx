@@ -38,7 +38,7 @@ function tabOptions(title: string, icon: IconName, activeIcon: IconName) {
  * the visual language is still being settled.
  */
 export default function TabsLayout() {
-  const { colors, typography } = useTheme();
+  const { colors, spacing, typography } = useTheme();
 
   return (
     <Tabs
@@ -46,17 +46,22 @@ export default function TabsLayout() {
         headerShown: false,
         tabBarActiveTintColor: colors.accent,
         tabBarInactiveTintColor: colors.textMuted,
+        // A flat bar sitting on the paper background: a single hairline on top,
+        // no shadow and no oversized container. The active state is carried by
+        // the brand colour alone, so the bar never competes with the content.
         tabBarStyle: {
           backgroundColor: colors.surface,
           borderTopColor: colors.border,
           borderTopWidth: StyleSheet.hairlineWidth,
+          paddingTop: spacing.xs,
+          elevation: 0,
         },
         tabBarLabelStyle: typography.caption,
       }}
     >
       <Tabs.Screen
         name="index"
-        options={tabOptions("Feed", "home-outline", "home")}
+        options={tabOptions("Home", "home-outline", "home")}
       />
       <Tabs.Screen
         name="communities"
@@ -64,7 +69,7 @@ export default function TabsLayout() {
       />
       <Tabs.Screen
         name="connections"
-        options={tabOptions("Students", "git-network-outline", "git-network")}
+        options={tabOptions("Students", "school-outline", "school")}
       />
       <Tabs.Screen
         name="profile"

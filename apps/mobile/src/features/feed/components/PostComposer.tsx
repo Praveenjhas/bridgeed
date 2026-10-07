@@ -2,7 +2,6 @@ import { StyleSheet, View } from "react-native";
 import {
   AppText,
   Button,
-  Card,
   InlineError,
   SectionHeading,
   TextField,
@@ -23,41 +22,40 @@ export interface PostComposerProps {
  * Composer for a new post.
  *
  * It is presentation only: every piece of state comes from the passed form, and
- * the only thing it decides is how the states look. The body field is a normal
- * `TextField` kept multi-line, so it shares the app's one field treatment
- * instead of inventing another input. The Post button reports its own busy state
- * and disables itself while there is nothing to send, which is what prevents a
- * double tap from posting twice.
+ * the only thing it decides is how the states look. It is deliberately unboxed —
+ * the destination, the body and the one action stack straight on the paper with
+ * whitespace between them, so writing a post feels like filling a page rather than
+ * a form. The Publish button reports its own busy state and disables itself while
+ * there is nothing to send, which prevents a double tap from posting twice.
  */
 export function PostComposer({ form, onSubmit }: PostComposerProps) {
   const { spacing } = useTheme();
   const length = form.content.length;
 
   return (
-    <View style={{ gap: spacing.lg }}>
-      <Card>
-        <View style={{ gap: spacing.md }}>
-          <SectionHeading
-            title="Post to"
-            hint="Your post lands in this community, and in the feed of everyone in it."
-          />
-          <ComposeTargetPicker
-            targets={form.targets}
-            selectedCommunityId={form.selectedCommunityId}
-            onSelect={form.selectCommunity}
-            disabled={form.isSubmitting}
-          />
-        </View>
-      </Card>
+    <View style={{ gap: spacing.xxl }}>
+      <View style={{ gap: spacing.md }}>
+        <SectionHeading
+          title="Post to"
+          hint="Your post lands in this community, and in the feed of everyone in it."
+        />
+        <ComposeTargetPicker
+          targets={form.targets}
+          selectedCommunityId={form.selectedCommunityId}
+          onSelect={form.selectCommunity}
+          disabled={form.isSubmitting}
+        />
+      </View>
 
-      <Card>
+      <View style={{ gap: spacing.md }}>
+        <SectionHeading title="What do you want to say?" />
         <TextField
           label="Your post"
           value={form.content}
           onChangeText={form.setContent}
-          placeholder="Ask a question, share a resource, or start a study discussion."
+          placeholder="Share something useful, interesting, or worth discussing…"
           multiline
-          numberOfLines={6}
+          numberOfLines={8}
           editable={!form.isSubmitting}
           hint={`${length} / ${MAX_POST_CONTENT_LENGTH} characters`}
           error={
@@ -67,7 +65,7 @@ export function PostComposer({ form, onSubmit }: PostComposerProps) {
           }
           style={styles.body}
         />
-      </Card>
+      </View>
 
       {form.submitErrorMessage !== null ? (
         <InlineError
@@ -77,7 +75,7 @@ export function PostComposer({ form, onSubmit }: PostComposerProps) {
       ) : null}
 
       <Button
-        label="Post"
+        label="Publish"
         icon="send"
         size="lg"
         fullWidth

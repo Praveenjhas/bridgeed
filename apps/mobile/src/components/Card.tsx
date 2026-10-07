@@ -20,10 +20,13 @@ export interface CardProps {
 }
 
 /**
- * The standard surface for grouped content.
+ * The standard surface for genuinely grouped content.
  *
- * Cards are the only element that carries elevation, which keeps the visual
- * hierarchy flat and predictable: background, card, content.
+ * Cards are flat: separated from the paper background by a hairline border, not
+ * by a drop shadow. Under the "Campus Editorial" direction most content belongs
+ * in rows and dividers instead of a card, so this is used deliberately for a
+ * distinct object or an important callout, never as the default wrapper for
+ * every section.
  */
 export function Card({
   children,
@@ -32,7 +35,7 @@ export function Card({
   accessibilityLabel,
   accessibilityHint,
 }: CardProps) {
-  const { colors, radius, shadows, spacing } = useTheme();
+  const { colors, radius, spacing } = useTheme();
 
   const surfaceStyle: StyleProp<ViewStyle> = [
     styles.base,
@@ -42,7 +45,6 @@ export function Card({
       borderRadius: radius.lg,
       padding: spacing.lg,
     },
-    shadows.card,
     style,
   ];
 

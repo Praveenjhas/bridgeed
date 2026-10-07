@@ -10,7 +10,6 @@ import type { StudentProfileDetails, University } from "@bridgeed/shared";
 import {
   AppText,
   Button,
-  Card,
   ErrorState,
   InlineError,
   LoadingState,
@@ -127,7 +126,6 @@ function EditProfileForm({ profile }: EditProfileFormProps) {
               gap: spacing.xl,
             }}
           >
-            <Card>
               <View style={{ gap: spacing.lg }}>
                 <SectionHeading
                   title="About you"
@@ -158,9 +156,7 @@ function EditProfileForm({ profile }: EditProfileFormProps) {
                   editable={!form.isSaving}
                 />
               </View>
-            </Card>
 
-            <Card>
               <View style={{ gap: spacing.lg }}>
                 <SectionHeading
                   title="Education"
@@ -235,9 +231,7 @@ function EditProfileForm({ profile }: EditProfileFormProps) {
                   editable={!form.isSaving}
                 />
               </View>
-            </Card>
 
-            <Card>
               <View style={{ gap: spacing.md }}>
                 <SectionHeading
                   title="Skills"
@@ -257,9 +251,7 @@ function EditProfileForm({ profile }: EditProfileFormProps) {
                   onRetry={skills.refresh}
                 />
               </View>
-            </Card>
 
-            <Card>
               <View style={{ gap: spacing.md }}>
                 <SectionHeading
                   title="Interests"
@@ -281,7 +273,6 @@ function EditProfileForm({ profile }: EditProfileFormProps) {
                   onRetry={interests.refresh}
                 />
               </View>
-            </Card>
 
             {form.errorMessage !== null ? (
               <InlineError

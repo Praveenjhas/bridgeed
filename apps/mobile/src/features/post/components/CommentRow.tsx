@@ -11,10 +11,10 @@ export interface CommentRowProps {
 /**
  * One comment in a thread.
  *
- * The like count is shown as a plain number rather than as a button: the comment
- * listing does not report whether the reading student liked a comment, so a
- * toggle would be guessing at the state. Making it a button later needs the API
- * to return that flag first.
+ * It reads like a short letter: a face, a bold name and the time, then the text at
+ * reading size. The like count is shown as a plain number rather than as a button,
+ * because the comment listing does not report whether the reading student liked a
+ * comment, so a toggle would be guessing at the state.
  */
 export function CommentRow({ comment }: CommentRowProps) {
   const { layout, spacing } = useTheme();
@@ -27,10 +27,23 @@ export function CommentRow({ comment }: CommentRowProps) {
         size="sm"
       />
       <View style={{ flex: 1, gap: spacing.xs }}>
-        <AppText variant="caption" tone="secondary" numberOfLines={1}>
-          {`${comment.author.name} · ${formatRelativeTime(comment.createdAt)}`}
+        <View
+          style={{
+            flexDirection: "row",
+            alignItems: "center",
+            gap: spacing.xs,
+          }}
+        >
+          <AppText variant="bodyStrong" numberOfLines={1}>
+            {comment.author.name}
+          </AppText>
+          <AppText variant="caption" tone="muted" numberOfLines={1}>
+            {`· ${formatRelativeTime(comment.createdAt)}`}
+          </AppText>
+        </View>
+        <AppText variant="body" tone="secondary">
+          {comment.content}
         </AppText>
-        <AppText variant="body">{comment.content}</AppText>
         <View
           style={{
             flexDirection: "row",

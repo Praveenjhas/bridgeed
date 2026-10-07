@@ -45,7 +45,7 @@ export function OnboardingProgress({ currentStep }: OnboardingProgressProps) {
             style={[
               styles.segment,
               {
-                borderRadius: radius.pill,
+                borderRadius: radius.sm,
                 backgroundColor:
                   index < position ? colors.accent : colors.borderStrong,
               },

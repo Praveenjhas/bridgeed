@@ -1,4 +1,5 @@
 import { colors, type ColorName } from "./colors";
+import { fontAssets, fontFamilies, type FontFamilyToken } from "./fonts";
 import { layout } from "./layout";
 import { radius, type RadiusToken } from "./radius";
 import { shadows, type ShadowToken } from "./shadows";
@@ -13,6 +14,7 @@ import { typography, type TypographyToken } from "./typography";
  */
 export interface Theme {
   readonly colors: typeof colors;
+  readonly fonts: typeof fontFamilies;
   readonly spacing: typeof spacing;
   readonly typography: typeof typography;
   readonly radius: typeof radius;
@@ -22,6 +24,7 @@ export interface Theme {
 
 export const theme: Theme = {
   colors,
+  fonts: fontFamilies,
   spacing,
   typography,
   radius,
@@ -41,9 +44,19 @@ export function useTheme(): Theme {
   return theme;
 }
 
-export { colors, layout, radius, shadows, spacing, typography };
+export {
+  colors,
+  fontAssets,
+  fontFamilies,
+  layout,
+  radius,
+  shadows,
+  spacing,
+  typography,
+};
 export type {
   ColorName,
+  FontFamilyToken,
   RadiusToken,
   ShadowToken,
   SpacingToken,

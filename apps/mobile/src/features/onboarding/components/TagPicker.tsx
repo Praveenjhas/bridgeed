@@ -116,7 +116,7 @@ export function TagPicker({
                         ? colors.surfaceMuted
                         : colors.surface,
                     borderColor: isSelected ? colors.accent : colors.border,
-                    borderRadius: radius.pill,
+                    borderRadius: radius.sm,
                     paddingVertical: spacing.sm,
                     paddingHorizontal: spacing.md,
                     gap: spacing.xs,

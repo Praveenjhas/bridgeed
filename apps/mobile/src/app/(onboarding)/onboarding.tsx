@@ -6,7 +6,13 @@ import {
   StyleSheet,
   View,
 } from "react-native";
-import { AppText, Button, InlineError, Screen } from "@/components";
+import {
+  AppText,
+  BrandWordmark,
+  Button,
+  InlineError,
+  Screen,
+} from "@/components";
 import {
   BasicsStep,
   DRAFT_ISSUE_FIELDS,
@@ -254,12 +260,10 @@ export default function OnboardingScreen() {
           >
             <View style={{ gap: spacing.md }}>
               <View style={[styles.headerRow, { gap: spacing.md }]}>
-                <AppText variant="overline" tone="accent">
-                  BridgeEd
-                </AppText>
+                <BrandWordmark size="sm" />
                 <Button
                   label="Sign out"
-                  variant="ghost"
+                  variant="tertiary"
                   size="sm"
                   accessibilityLabel="Sign out of your account"
                   onPress={handleSignOut}

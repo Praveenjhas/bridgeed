@@ -61,12 +61,12 @@ export default function LoginScreen() {
 
   return (
     <AuthScaffold
-      title="Welcome back"
-      subtitle="Sign in to see your feed, communities and connections."
+      title="Your campus, connected."
+      subtitle="Meet students, find communities, and build your university network."
       footer={
         <AuthSwitchPrompt
-          prompt="New to BridgeEd?"
-          actionLabel="Create an account"
+          prompt="Don't have an account?"
+          actionLabel="Create account"
           onPress={() => router.push("/register")}
         />
       }

@@ -1,15 +1,9 @@
 import { memo, useState } from "react";
 import { Pressable, StyleSheet, View } from "react-native";
 import type { StudentProfile } from "@bridgeed/shared";
-import { AppText, Badge, Button, Card } from "@/components";
-import {
-  formatStudentHint,
-  StudentIdentity,
-  useUniversity,
-} from "@/features/students";
+import { AppText, Button, Card, StudentRow } from "@/components";
+import { formatStudentHint, useUniversity } from "@/features/students";
 import { useTheme } from "@/theme";
-import { relationshipLabel, relationshipTone } from "../labels";
-import { RELATIONSHIP_STATES } from "../relationships";
 
 export interface ConnectionRequestCardProps {
   /** Id of the pending request row, which is what the API decisions act on. */
@@ -70,19 +64,11 @@ export const ConnectionRequestCard = memo(function ConnectionRequestCard({
             accessibilityHint="Opens this student's profile"
             onPress={() => onPress(studentId)}
           >
-            <StudentIdentity
+            <StudentRow
               name={profile.name}
               username={profile.username}
               imageUrl={profile.profileImageUrl}
               meta={university?.name ?? formatStudentHint(profile)}
-              trailing={
-                <Badge
-                  label={relationshipLabel(
-                    RELATIONSHIP_STATES.PENDING_INCOMING,
-                  )}
-                  tone={relationshipTone(RELATIONSHIP_STATES.PENDING_INCOMING)}
-                />
-              }
             />
           </Pressable>
         ) : (
@@ -107,7 +93,7 @@ export const ConnectionRequestCard = memo(function ConnectionRequestCard({
           <Button
             label="Decline"
             size="sm"
-            variant="secondary"
+            variant="destructive"
             loading={decision === "decline"}
             disabled={isBusy}
             onPress={() => decide("decline")}

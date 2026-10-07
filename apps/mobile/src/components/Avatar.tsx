@@ -2,7 +2,7 @@ import { Image, View } from "react-native";
 import { AppText } from "./AppText";
 import { useTheme } from "@/theme";
 
-export type AvatarSize = "sm" | "md" | "lg";
+export type AvatarSize = "sm" | "md" | "lg" | "xl";
 
 export interface AvatarProps {
   /** Display name. Its initials are used when there is no picture. */
@@ -13,8 +13,9 @@ export interface AvatarProps {
 
 const INITIAL_FONT_SIZE: Record<AvatarSize, number> = {
   sm: 12,
-  md: 14,
-  lg: 17,
+  md: 15,
+  lg: 24,
+  xl: 30,
 };
 
 /** Two letters at most, so an avatar never looks crowded. */
@@ -42,7 +43,7 @@ export function initialsOf(name: string): string {
  * state: initials on a tinted accent background, not a broken image.
  */
 export function Avatar({ name, imageUrl, size = "md" }: AvatarProps) {
-  const { colors, layout, radius } = useTheme();
+  const { colors, fonts, layout, radius } = useTheme();
   const dimension = layout.avatar[size];
   // A plain object rather than a typed style, because the same shape has to be
   // valid for both `Image` and `View`.
@@ -69,7 +70,10 @@ export function Avatar({ name, imageUrl, size = "md" }: AvatarProps) {
     >
       <AppText
         tone="accent"
-        style={{ fontSize: INITIAL_FONT_SIZE[size], fontWeight: "600" }}
+        style={{
+          fontFamily: fonts.bodySemiBold,
+          fontSize: INITIAL_FONT_SIZE[size],
+        }}
       >
         {initialsOf(name)}
       </AppText>

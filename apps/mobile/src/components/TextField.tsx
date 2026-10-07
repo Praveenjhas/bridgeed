@@ -72,11 +72,11 @@ export const TextField = forwardRef<TextInput, TextFieldProps>(
       ? colors.danger
       : isFocused
         ? colors.accent
-        : colors.borderStrong;
+        : colors.border;
 
     return (
       <View style={{ gap: spacing.xs }}>
-        <AppText variant="caption" tone="secondary" style={styles.label}>
+        <AppText variant="label" tone="secondary">
           {label}
         </AppText>
 
@@ -172,9 +172,6 @@ export const TextField = forwardRef<TextInput, TextFieldProps>(
 TextField.displayName = "TextField";
 
 const styles = StyleSheet.create({
-  label: {
-    fontWeight: "600",
-  },
   control: {
     flexDirection: "row",
     alignItems: "center",

@@ -7,31 +7,33 @@ import { useTheme } from "@/theme";
 export interface EmptyStateProps {
   title: string;
   message: string;
+  /** Optional small standing glyph, drawn on its own rather than in a circle. */
   icon?: IconName;
   /** Rendered under the message, usually a single button. */
   action?: ReactNode;
-  /** Switches the illustration between neutral and failure styling. */
+  /** Switches the glyph between neutral and failure styling. */
   tone?: "neutral" | "danger";
   style?: StyleProp<ViewStyle>;
 }
 
 /**
- * Centered explanation for a screen with nothing to show.
+ * Editorial explanation for a screen with nothing to show.
  *
- * Empty states say what happened and what to do next; a spinner sitting forever
- * on an empty list is the failure mode this replaces.
+ * Empty states are human and lead somewhere: a short title, one honest sentence,
+ * and often a single next step. There is no decorative illustration and no icon
+ * inside a coloured circle — under the "Campus Editorial" direction an oversized
+ * graphic is exactly the noise this replaces.
  */
 export function EmptyState({
   title,
   message,
-  icon = "information-circle-outline",
+  icon,
   action,
   tone = "neutral",
   style,
 }: EmptyStateProps) {
-  const { colors, layout, radius, spacing } = useTheme();
+  const { layout, spacing } = useTheme();
   const isDanger = tone === "danger";
-  const circleSize = layout.icon.lg * 2.5;
 
   return (
     <View
@@ -39,31 +41,22 @@ export function EmptyState({
         {
           alignItems: "center",
           justifyContent: "center",
-          paddingVertical: spacing.xxxl,
+          paddingVertical: spacing.huge,
           paddingHorizontal: spacing.xl,
           gap: spacing.sm,
         },
         style,
       ]}
     >
-      <View
-        style={{
-          width: circleSize,
-          height: circleSize,
-          borderRadius: radius.pill,
-          alignItems: "center",
-          justifyContent: "center",
-          backgroundColor: isDanger ? colors.dangerSoft : colors.surfaceMuted,
-          marginBottom: spacing.xs,
-        }}
-      >
+      {icon ? (
         <Icon
           name={icon}
           size={layout.icon.lg}
-          tone={isDanger ? "danger" : "textMuted"}
+          tone={isDanger ? "danger" : "accent"}
+          style={{ marginBottom: spacing.xs }}
         />
-      </View>
-      <AppText variant="heading" style={{ textAlign: "center" }}>
+      ) : null}
+      <AppText variant="subheading" style={{ textAlign: "center" }}>
         {title}
       </AppText>
       <AppText variant="body" tone="secondary" style={{ textAlign: "center" }}>

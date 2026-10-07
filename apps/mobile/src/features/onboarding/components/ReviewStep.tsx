@@ -1,5 +1,5 @@
 import { View } from "react-native";
-import { AppText, Card, InlineError } from "@/components";
+import { AppText, InlineError } from "@/components";
 import { useTheme } from "@/theme";
 import type { ReviewRow } from "../review";
 import type { OnboardingStepId } from "../steps";
@@ -32,14 +32,12 @@ export function ReviewStep({
 
   return (
     <View style={{ gap: spacing.lg }}>
-      <Card style={{ padding: spacing.lg }}>
-        <ReviewSummary
-          rows={rows}
-          onEdit={onEdit}
-          skippedLabel="Not added"
-          editLabel="Edit"
-        />
-      </Card>
+      <ReviewSummary
+        rows={rows}
+        onEdit={onEdit}
+        skippedLabel="Not added"
+        editLabel="Edit"
+      />
 
       <AppText variant="caption" tone="muted">
         Finishing creates your profile and saves the skills and interests you

@@ -9,7 +9,6 @@ import { Stack, router } from "expo-router";
 import {
   AppText,
   Button,
-  Card,
   EmptyState,
   InlineError,
   Screen,
@@ -57,10 +56,10 @@ export default function CreateCommunityScreen() {
   if (!isConfigured) {
     return (
       <Screen>
-        <Stack.Screen options={{ title: "New study group" }} />
+        <Stack.Screen options={{ title: "Create a community" }} />
         <EmptyState
           icon="person-outline"
-          title="Sign in to create a group"
+          title="Sign in to create a community"
           message={detail}
         />
       </Screen>
@@ -69,7 +68,7 @@ export default function CreateCommunityScreen() {
 
   return (
     <Screen>
-      <Stack.Screen options={{ title: "New study group" }} />
+      <Stack.Screen options={{ title: "Create a community" }} />
       <KeyboardAvoidingView
         behavior={Platform.OS === "ios" ? "padding" : undefined}
         style={styles.fill}
@@ -82,54 +81,51 @@ export default function CreateCommunityScreen() {
             paddingBottom: spacing.xxxl,
           }}
         >
-          <View style={{ gap: spacing.lg }}>
-            <Card>
-              <View style={{ gap: spacing.md }}>
-                <SectionHeading
-                  title="Name and handle"
-                  hint="The name is what students read; the handle is how they find and mention the group."
-                />
-                <TextField
-                  label="Name"
-                  value={form.name}
-                  onChangeText={form.setName}
-                  placeholder="e.g. Algorithms Study Group"
-                  icon="people-outline"
-                  maxLength={MAX_COMMUNITY_NAME_LENGTH}
-                  editable={!form.isSubmitting}
-                  hint={`${form.name.trim().length} / ${MAX_COMMUNITY_NAME_LENGTH} characters`}
-                  error={form.nameError ?? undefined}
-                />
-                <TextField
-                  label="Handle"
-                  value={form.slug}
-                  onChangeText={form.setSlug}
-                  placeholder="e.g. algorithms-study-group"
-                  icon="at-outline"
-                  autoCapitalize="none"
-                  autoCorrect={false}
-                  editable={!form.isSubmitting}
-                  hint="Generated from the name until you change it."
-                  error={form.slugError ?? undefined}
-                />
-              </View>
-            </Card>
+          <View style={{ gap: spacing.xxl }}>
+            <View style={{ gap: spacing.md }}>
+              <SectionHeading
+                title="Community name"
+                hint="The name is what students read; the handle is how they find and mention the group."
+              />
+              <TextField
+                label="Name"
+                value={form.name}
+                onChangeText={form.setName}
+                placeholder="e.g. Algorithms Study Group"
+                icon="people-outline"
+                maxLength={MAX_COMMUNITY_NAME_LENGTH}
+                editable={!form.isSubmitting}
+                hint={`${form.name.trim().length} / ${MAX_COMMUNITY_NAME_LENGTH} characters`}
+                error={form.nameError ?? undefined}
+              />
+              <TextField
+                label="Handle"
+                value={form.slug}
+                onChangeText={form.setSlug}
+                placeholder="e.g. algorithms-study-group"
+                icon="at-outline"
+                autoCapitalize="none"
+                autoCorrect={false}
+                editable={!form.isSubmitting}
+                hint="Generated from the name until you change it."
+                error={form.slugError ?? undefined}
+              />
+            </View>
 
-            <Card>
-              <View style={{ gap: spacing.md }}>
-                <SectionHeading
-                  title="Who can join"
-                  hint="You can change your mind later from the community's member list."
-                />
-                <CommunityTypePicker
-                  value={form.type}
-                  onChange={form.setType}
-                  disabled={form.isSubmitting}
-                />
-              </View>
-            </Card>
+            <View style={{ gap: spacing.md }}>
+              <SectionHeading
+                title="Type"
+                hint="Public communities are open to everyone; private ones need approval."
+              />
+              <CommunityTypePicker
+                value={form.type}
+                onChange={form.setType}
+                disabled={form.isSubmitting}
+              />
+            </View>
 
-            <Card>
+            <View style={{ gap: spacing.md }}>
+              <SectionHeading title="Description" />
               <TextField
                 label="Description"
                 value={form.description}
@@ -149,7 +145,7 @@ export default function CreateCommunityScreen() {
                 }
                 style={styles.description}
               />
-            </Card>
+            </View>
 
             {form.submitErrorMessage !== null ? (
               <InlineError
@@ -159,7 +155,7 @@ export default function CreateCommunityScreen() {
             ) : null}
 
             <Button
-              label="Create study group"
+              label="Create community"
               icon="add-circle-outline"
               size="lg"
               fullWidth

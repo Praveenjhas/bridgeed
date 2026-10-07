@@ -14,6 +14,7 @@ import {
 import {
   AppText,
   Button,
+  Divider,
   EmptyState,
   ErrorState,
   Icon,
@@ -192,7 +193,7 @@ export default function CommunitiesScreen() {
   const header = (
     <PageHeader
       title="Communities"
-      subtitle="Communities you belong to, and ones you can join"
+      subtitle="Find people learning, building and discussing the same things."
       showWordmark
       actions={
         <>
@@ -323,7 +324,7 @@ export default function CommunitiesScreen() {
             */}
             <View style={{ gap: layout.listGap }}>
               <SectionHeading
-                title="My communities"
+                title="Your communities"
                 hint={
                   myCommunities.length > 0
                     ? `${myCommunities.length} joined`
@@ -381,9 +382,12 @@ export default function CommunitiesScreen() {
             endLabel="You have seen every community."
           />
         }
+        // Community rows are separated by a hairline rather than by a gap
+        // between cards, so the directory reads as one discovery list.
+        ItemSeparatorComponent={() => <Divider />}
         contentContainerStyle={{
           padding: layout.screenPadding,
-          gap: layout.listGap,
+          gap: spacing.none,
           paddingBottom: spacing.xxxl,
         }}
       />

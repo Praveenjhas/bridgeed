@@ -129,8 +129,8 @@ export default function RegisterScreen() {
 
   return (
     <AuthScaffold
-      title="Create your BridgeEd account"
-      subtitle="Join the communities you belong to and connect with other students."
+      title="Join BridgeEd"
+      subtitle="Build your university network."
       footer={
         <AuthSwitchPrompt
           prompt="Already have an account?"

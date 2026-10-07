@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import { StyleSheet, View, type StyleProp, type ViewStyle } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { AppText } from "./AppText";
+import { BrandWordmark } from "./BrandWordmark";
 import { useTheme } from "@/theme";
 
 export interface PageHeaderProps {
@@ -21,6 +22,10 @@ export interface PageHeaderProps {
  * subtitle, a wordmark and arbitrary trailing actions, and because keeping it in
  * the scroll tree makes pull to refresh work exactly as expected. It adds the
  * top safe area inset itself, so a screen never has to think about the notch.
+ *
+ * Editorially it sits directly on the paper background with no white bar and no
+ * bottom border: the title is large, the subtitle is quiet, and whitespace below
+ * separates the header from the content instead of a rule.
  */
 export function PageHeader({
   title,
@@ -37,13 +42,10 @@ export function PageHeader({
       style={[
         styles.base,
         {
-          backgroundColor: colors.surface,
-          borderBottomColor: colors.border,
-          borderBottomWidth: StyleSheet.hairlineWidth,
-          paddingTop: insets.top + spacing.sm,
+          backgroundColor: colors.background,
+          paddingTop: insets.top + spacing.lg,
           paddingBottom: spacing.md,
           paddingHorizontal: layout.screenPadding,
-          minHeight: layout.headerHeight + insets.top,
         },
         style,
       ]}
@@ -51,19 +53,17 @@ export function PageHeader({
       <View style={[styles.row, { gap: spacing.md }]}>
         <View style={styles.titleBlock}>
           {showWordmark ? (
-            <AppText variant="overline" tone="accent">
-              BridgeEd
-            </AppText>
+            <BrandWordmark size="sm" style={{ marginBottom: spacing.md }} />
           ) : null}
           <AppText variant="title" numberOfLines={1} accessibilityRole="header">
             {title}
           </AppText>
           {subtitle ? (
             <AppText
-              variant="caption"
-              tone="muted"
+              variant="body"
+              tone="secondary"
               numberOfLines={2}
-              style={{ marginTop: spacing.xxs }}
+              style={{ marginTop: spacing.xs }}
             >
               {subtitle}
             </AppText>

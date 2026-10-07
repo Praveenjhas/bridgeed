@@ -1,6 +1,6 @@
 import { StyleSheet, View } from "react-native";
 import type { CommunityMember } from "@bridgeed/shared";
-import { AppText, Avatar, Button, Card, SectionHeading } from "@/components";
+import { AppText, Avatar, Button, SectionHeading } from "@/components";
 import { useTheme } from "@/theme";
 import { MEMBERS_PREVIEW_AVATARS } from "../constants";
 import { formatMemberCount } from "../labels";
@@ -28,45 +28,43 @@ export function CommunityMembersPreview({
   const hidden = total !== null ? Math.max(0, total - visible.length) : 0;
 
   return (
-    <Card>
-      <View style={{ gap: spacing.md }}>
-        <SectionHeading
-          title="Members"
-          hint={total !== null ? formatMemberCount(total) : undefined}
-        />
+    <View style={{ gap: spacing.md }}>
+      <SectionHeading
+        title="Members"
+        hint={total !== null ? formatMemberCount(total) : undefined}
+      />
 
-        {visible.length > 0 ? (
-          <View style={[styles.avatars, { gap: spacing.sm }]}>
-            {visible.map((member) => (
-              <Avatar
-                key={member.id}
-                name={member.member.name}
-                imageUrl={member.member.profileImageUrl}
-                size="sm"
-              />
-            ))}
-            {hidden > 0 ? (
-              <AppText variant="caption" tone="muted">
-                {`+${hidden}`}
-              </AppText>
-            ) : null}
-          </View>
-        ) : (
-          <AppText variant="caption" tone="muted">
-            {total === 0
-              ? "Nobody has joined this community yet."
-              : "Loading the first members"}
-          </AppText>
-        )}
+      {visible.length > 0 ? (
+        <View style={[styles.avatars, { gap: spacing.sm }]}>
+          {visible.map((member) => (
+            <Avatar
+              key={member.id}
+              name={member.member.name}
+              imageUrl={member.member.profileImageUrl}
+              size="sm"
+            />
+          ))}
+          {hidden > 0 ? (
+            <AppText variant="caption" tone="muted">
+              {`+${hidden}`}
+            </AppText>
+          ) : null}
+        </View>
+      ) : (
+        <AppText variant="caption" tone="muted">
+          {total === 0
+            ? "Nobody has joined this community yet."
+            : "Loading the first members"}
+        </AppText>
+      )}
 
-        <Button
-          label="See all members"
-          variant="secondary"
-          size="sm"
-          onPress={onSeeAll}
-        />
-      </View>
-    </Card>
+      <Button
+        label="See all members"
+        variant="secondary"
+        size="sm"
+        onPress={onSeeAll}
+      />
+    </View>
   );
 }
 

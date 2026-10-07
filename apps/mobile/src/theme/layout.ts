@@ -18,16 +18,16 @@ export const layout = {
   headerHeight: 56,
   /** Default horizontal gutter between screen edge and content. */
   screenPadding: spacing.lg,
-  /** Vertical gap between cards in a list. */
+  /** Vertical gap between rows in a list. */
   listGap: spacing.sm,
   /** Avatar sizes, keyed by where they are used. */
-  avatar: { sm: 32, md: 40, lg: 48 },
+  avatar: { sm: 32, md: 40, lg: 72, xl: 88 },
   /** Icon sizes, keyed by the role the icon plays in a row or button. */
   icon: { sm: 16, md: 20, lg: 24 },
   /** Upper bound for content width so tablets do not stretch text lines. */
   maxContentWidth: 680,
-  /** Number of placeholder cards shown while the first feed page loads. */
+  /** Number of placeholder rows shown while the first feed page loads. */
   skeletonCards: 3,
-  /** Height of one placeholder card. */
-  skeletonCardHeight: 148,
+  /** Height of one placeholder row. */
+  skeletonCardHeight: 96,
 } as const;

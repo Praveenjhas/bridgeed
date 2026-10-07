@@ -1,14 +1,10 @@
 import { memo } from "react";
 import { StyleSheet, View } from "react-native";
 import type { StudentProfile } from "@bridgeed/shared";
-import { AppText, Badge, Card, Icon } from "@/components";
-import {
-  formatStudentHint,
-  StudentIdentity,
-  useUniversity,
-} from "@/features/students";
+import { AppText, Card, Icon, StudentRow } from "@/components";
+import { formatStudentHint, useUniversity } from "@/features/students";
 import { useTheme } from "@/theme";
-import { relationshipLabel, relationshipTone } from "../labels";
+import { relationshipLabel } from "../labels";
 import { RELATIONSHIP_STATES } from "../relationships";
 
 export interface ConnectionCardProps {
@@ -57,28 +53,23 @@ export const ConnectionCard = memo(function ConnectionCard({
   }
 
   return (
-    <Card
+    <StudentRow
+      name={profile.name}
+      username={profile.username}
+      imageUrl={profile.profileImageUrl}
+      meta={university?.name ?? formatStudentHint(profile)}
+      trailing={
+        <View style={[styles.row, { gap: spacing.sm }]}>
+          <AppText variant="caption" tone="muted">
+            {relationshipLabel(RELATIONSHIP_STATES.ACCEPTED)}
+          </AppText>
+          <Icon name="chevron-forward" size={16} tone="textDisabled" />
+        </View>
+      }
       onPress={() => onPress(studentId)}
       accessibilityLabel={`${profile.name}, @${profile.username}, connected`}
       accessibilityHint="Opens this student's profile"
-    >
-      <StudentIdentity
-        name={profile.name}
-        username={profile.username}
-        imageUrl={profile.profileImageUrl}
-        meta={university?.name ?? formatStudentHint(profile)}
-        trailing={
-          <View style={[styles.row, { gap: spacing.sm }]}>
-            <Badge
-              label={relationshipLabel(RELATIONSHIP_STATES.ACCEPTED)}
-              tone={relationshipTone(RELATIONSHIP_STATES.ACCEPTED)}
-              icon="checkmark"
-            />
-            <Icon name="chevron-forward" size={16} tone="textDisabled" />
-          </View>
-        }
-      />
-    </Card>
+    />
   );
 });
 

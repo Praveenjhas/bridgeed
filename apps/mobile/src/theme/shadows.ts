@@ -4,28 +4,24 @@ import { colors } from "./colors";
 /**
  * Elevation tokens.
  *
- * Cards use one soft shadow so content separates from the background without
- * looking heavy. Android ignores the shadow props, so each token also carries
- * the equivalent `elevation` value.
+ * The editorial direction separates surfaces with borders, whitespace and a warm
+ * background difference rather than with drop shadows, so there is no default
+ * card shadow. `raised` exists for the rare element that genuinely floats above
+ * content. Android ignores the shadow props, so each token also carries the
+ * equivalent `elevation` value.
  */
 export const shadows = {
-  /** No elevation, for flat rows inside a card. */
+  /** No elevation, for flat rows and editorial sections. */
   none: {} as ViewStyle,
-  /** Default card elevation. */
-  card: {
-    shadowColor: colors.textPrimary,
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 6,
-    elevation: 2,
-  } satisfies ViewStyle,
-  /** Elevation for elements that float above content, such as the composer. */
+  /** @deprecated Editorial surfaces are flat; kept so existing call sites still compile. */
+  card: {} as ViewStyle,
+  /** Elevation for elements that genuinely float above content. */
   raised: {
     shadowColor: colors.textPrimary,
-    shadowOffset: { width: 0, height: 4 },
+    shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.08,
-    shadowRadius: 14,
-    elevation: 4,
+    shadowRadius: 16,
+    elevation: 5,
   } satisfies ViewStyle,
 } as const;
 

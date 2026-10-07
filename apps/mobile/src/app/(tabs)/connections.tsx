@@ -10,6 +10,7 @@ import { router } from "expo-router";
 import type { Connection, StudentProfile } from "@bridgeed/shared";
 import {
   AppText,
+  Divider,
   EmptyState,
   ErrorState,
   Icon,
@@ -225,7 +226,7 @@ export default function StudentsScreen() {
   const header = (
     <PageHeader
       title="Students"
-      subtitle="Find classmates, and manage your network"
+      subtitle="Discover people from across BridgeEd."
       showWordmark
       actions={
         <IconButton
@@ -464,9 +465,12 @@ export default function StudentsScreen() {
             endLabel="You have seen every student."
           />
         }
+        // Students are separated by a hairline, so the directory reads as one
+        // people list rather than a stack of boxed cards.
+        ItemSeparatorComponent={() => <Divider />}
         contentContainerStyle={{
           padding: layout.screenPadding,
-          gap: layout.listGap,
+          gap: spacing.none,
           paddingBottom: spacing.xxxl,
         }}
       />

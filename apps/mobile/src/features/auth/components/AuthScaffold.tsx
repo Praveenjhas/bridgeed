@@ -6,7 +6,7 @@ import {
   StyleSheet,
   View,
 } from "react-native";
-import { AppText, BrandMark, Card, Screen } from "@/components";
+import { AppText, BrandWordmark, Screen } from "@/components";
 import { useTheme } from "@/theme";
 
 export interface AuthScaffoldProps {
@@ -69,23 +69,26 @@ export function AuthScaffold({
               gap: spacing.xxl,
             }}
           >
-            <View style={{ gap: spacing.lg }}>
-              <BrandMark />
-              <View style={{ gap: spacing.xs }}>
-                <AppText variant="display" accessibilityRole="header">
-                  {title}
-                </AppText>
-                <AppText variant="body" tone="secondary">
-                  {subtitle}
-                </AppText>
+            <View style={{ gap: spacing.xxl }}>
+              <View style={{ gap: spacing.lg }}>
+                <BrandWordmark size="lg" />
+                <View style={{ gap: spacing.sm }}>
+                  <AppText variant="display" accessibilityRole="header">
+                    {title}
+                  </AppText>
+                  <AppText variant="body" tone="secondary">
+                    {subtitle}
+                  </AppText>
+                </View>
               </View>
+
+              {/* The form is not boxed in a card: it sits straight on the paper,
+                  which is what makes the screen read as a product page rather
+                  than a panel. */}
+              <View style={{ gap: spacing.lg }}>{children}</View>
+
+              <View style={{ alignItems: "center" }}>{footer}</View>
             </View>
-
-            <Card style={{ padding: spacing.xl, gap: spacing.lg }}>
-              {children}
-            </Card>
-
-            <View style={{ alignItems: "center" }}>{footer}</View>
           </View>
         </ScrollView>
       </KeyboardAvoidingView>

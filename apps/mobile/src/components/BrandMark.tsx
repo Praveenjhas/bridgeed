@@ -1,84 +1,147 @@
 import { View, type StyleProp, type ViewStyle } from "react-native";
-import { AppText } from "./AppText";
 import { useTheme } from "@/theme";
 
 /** Name of the product, spelled once so the lockup is the only place it lives. */
-const PRODUCT_NAME = "BridgeEd";
+export const PRODUCT_NAME = "BridgeEd";
 
-/** The letter that stands in for the product inside the mark itself. */
-const MONOGRAM = "B";
+export type BrandMarkSize = "sm" | "md" | "lg";
 
-export type BrandMarkSize = "sm" | "md";
+/**
+ * `tile` draws the mark on a filled brand tile (the default, for light
+ * surfaces); `plain` draws it with no tile, for placement on a brand or dark
+ * surface where a tile would disappear.
+ */
+export type BrandMarkVariant = "tile" | "plain";
 
 export interface BrandMarkProps {
-  /** Size of the mark. The wordmark follows it. */
   size?: BrandMarkSize;
+  variant?: BrandMarkVariant;
   style?: StyleProp<ViewStyle>;
 }
 
-/** Tile edge and the type it carries, per size. */
-const MARK: Record<
-  BrandMarkSize,
-  { tile: number; fontSize: number; lineHeight: number }
-> = {
-  sm: { tile: 32, fontSize: 15, lineHeight: 19 },
-  md: { tile: 44, fontSize: 20, lineHeight: 25 },
-};
+/** Edge length of the mark's square, per size. */
+const TILE: Record<BrandMarkSize, number> = { sm: 28, md: 38, lg: 56 };
 
 /**
- * The BridgeEd lockup: a monogram tile beside the product name.
+ * The BridgeEd brand mark: a single arch — a bridge — spanning two nodes, the
+ * two students it connects.
  *
- * The product needs one consistent way to introduce itself, and the app
- * previously had none — each screen that mentioned the brand set its own text.
- * Putting it in one component means the sign-in screen, the feed header and any
- * future splash all say the same thing in the same voice.
+ * It is deliberately geometric and drawn from plain views rather than an image
+ * or an icon glyph, so it renders identically on every device, stays crisp at
+ * 28px, and shares the palette with the rest of the interface. The arch is the
+ * bridge the product is named for; the two dots are the people it carries, which
+ * is why the mark is a connection rather than an initial or a building.
  *
- * It is deliberately typographic: a tinted tile and the wordmark, no illustration
- * and no image asset, so it renders identically on every device and stays in
- * step with `colors.accent`, which is also the colour of every primary action.
- * That shared colour is what ties the brand to the interaction.
+ * It is used sparingly — on the auth and entry surfaces, and on the occasional
+ * empty state — never as decoration on every screen.
  */
-export function BrandMark({ size = "md", style }: BrandMarkProps) {
-  const { colors, radius, spacing } = useTheme();
-  const mark = MARK[size];
+export function BrandMark({
+  size = "md",
+  variant = "tile",
+  style,
+}: BrandMarkProps) {
+  const { colors } = useTheme();
+  const tile = TILE[size];
+  const isTile = variant === "tile";
+
+  // Geometry is expressed as fractions of the tile so every size is the same
+  // mark, only scaled.
+  const archWidth = tile * 0.62;
+  const archHeight = archWidth / 2;
+  const stroke = Math.max(1.5, tile * 0.09);
+  const node = tile * 0.17;
+  const archLeft = (tile - archWidth) / 2;
+  const archTop = tile * 0.26;
+  const footY = archTop + archHeight;
+
+  const archColor = isTile ? colors.onAccent : colors.accent;
+  const nodeColor = isTile ? colors.goldSoft : colors.gold;
+
+  const mark = (
+    <View
+      style={{
+        width: tile,
+        height: tile,
+        alignItems: "center",
+        justifyContent: "center",
+      }}
+    >
+      {/*
+        The arch is the top half of a ring: a full circle of the arch's width,
+        clipped to its upper half by the wrapper's `overflow: hidden`.
+      */}
+      <View
+        style={{
+          position: "absolute",
+          left: archLeft,
+          top: archTop,
+          width: archWidth,
+          height: archHeight,
+          overflow: "hidden",
+        }}
+      >
+        <View
+          style={{
+            width: archWidth,
+            height: archWidth,
+            borderRadius: archWidth / 2,
+            borderWidth: stroke,
+            borderColor: archColor,
+          }}
+        />
+      </View>
+
+      {/* A student at each foot of the bridge. */}
+      <View
+        style={{
+          position: "absolute",
+          left: archLeft - node / 2,
+          top: footY - node / 2,
+          width: node,
+          height: node,
+          borderRadius: node / 2,
+          backgroundColor: nodeColor,
+        }}
+      />
+      <View
+        style={{
+          position: "absolute",
+          left: archLeft + archWidth - node / 2,
+          top: footY - node / 2,
+          width: node,
+          height: node,
+          borderRadius: node / 2,
+          backgroundColor: nodeColor,
+        }}
+      />
+    </View>
+  );
+
+  if (!isTile) {
+    return (
+      <View accessible accessibilityLabel={PRODUCT_NAME} style={style}>
+        {mark}
+      </View>
+    );
+  }
 
   return (
     <View
       accessible
       accessibilityLabel={PRODUCT_NAME}
       style={[
-        { flexDirection: "row", alignItems: "center", gap: spacing.sm },
-        style,
-      ]}
-    >
-      <View
-        style={{
-          width: mark.tile,
-          height: mark.tile,
-          borderRadius: radius.md,
+        {
+          width: tile,
+          height: tile,
+          borderRadius: tile * 0.3,
           backgroundColor: colors.accent,
           alignItems: "center",
           justifyContent: "center",
-        }}
-      >
-        <AppText
-          tone="onAccent"
-          style={{
-            fontSize: mark.fontSize,
-            lineHeight: mark.lineHeight,
-            fontWeight: "700",
-            letterSpacing: -0.4,
-          }}
-        >
-          {MONOGRAM}
-        </AppText>
-      </View>
-      <AppText
-        variant={size === "sm" ? "subheading" : "heading"}
-        style={{ letterSpacing: -0.2 }}
-      >
-        {PRODUCT_NAME}
-      </AppText>
+        },
+        style,
+      ]}
+    >
+      {mark}
     </View>
   );
 }

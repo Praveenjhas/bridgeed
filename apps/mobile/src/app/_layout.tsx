@@ -1,12 +1,13 @@
 import { useEffect } from "react";
 import { Stack } from "expo-router";
+import { useFonts } from "expo-font";
 import { StatusBar } from "expo-status-bar";
 import { ErrorState, LoadingState, Screen } from "@/components";
 import { logAuthEvent } from "@/features/auth/dev-log";
 import { AppProviders } from "@/providers/AppProviders";
 import { useAuth } from "@/providers/AuthProvider";
 import { useStudentProfileStatus } from "@/providers/StudentProfileProvider";
-import { useTheme } from "@/theme";
+import { fontAssets, useTheme } from "@/theme";
 
 /**
  * Route the stack returns to when a screen it was showing stops being available,
@@ -44,6 +45,11 @@ export default function RootLayout() {
 
 function RootNavigator() {
   const { colors } = useTheme();
+  // The Manrope and DM Sans families ship with the app. Nothing is rendered
+  // until they have loaded, so text never flashes in the system face and then
+  // swaps. A load failure is not fatal: the type scale falls back to the system
+  // font and the app still opens.
+  const [fontsLoaded, fontError] = useFonts(fontAssets);
   const { isAuthenticated, isRestoring } = useAuth();
   const {
     status: profileStatus,
@@ -71,6 +77,14 @@ function RootNavigator() {
       profileStatus,
     });
   }, [isAuthenticated, isRestoring, profileStatus]);
+
+  if (!fontsLoaded && !fontError) {
+    return (
+      <Screen>
+        <LoadingState label="Preparing BridgeEd" />
+      </Screen>
+    );
+  }
 
   // The session is read from secure storage and confirmed against `/auth/me`
   // before a single route is created. Waiting here is what stops a returning user
@@ -155,7 +169,7 @@ function RootNavigator() {
         />
         <Stack.Screen
           name="create-community"
-          options={{ ...detailScreenOptions, title: "New study group" }}
+          options={{ ...detailScreenOptions, title: "Create a community" }}
         />
       </Stack.Protected>
 

@@ -9,7 +9,11 @@ import { AppText, type TextTone } from "./AppText";
 import { Icon, type IconName } from "./Icon";
 import { useTheme, type ColorName } from "@/theme";
 
-export type ButtonVariant = "primary" | "secondary" | "ghost";
+export type ButtonVariant =
+  | "primary"
+  | "secondary"
+  | "tertiary"
+  | "destructive";
 export type ButtonSize = "lg" | "md" | "sm";
 
 export interface ButtonProps {
@@ -42,6 +46,15 @@ interface VariantTokens {
   iconTone: ColorName;
 }
 
+/**
+ * The four button roles.
+ *
+ * - `primary` — the one action a screen is for; the brand's solid colour.
+ * - `secondary` — a real but non-primary action; a bordered surface.
+ * - `tertiary` — a quiet action that belongs to its context (Cancel, Clear);
+ *   no fill until pressed.
+ * - `destructive` — an action that ends something; the one place red is used.
+ */
 const VARIANTS: Record<ButtonVariant, VariantTokens> = {
   primary: {
     background: "accent",
@@ -51,18 +64,30 @@ const VARIANTS: Record<ButtonVariant, VariantTokens> = {
     iconTone: "onAccent",
   },
   secondary: {
+    // A real but non-primary action: a warm surface with green text and a thin
+    // border, so it reads as a button next to the solid primary without shouting.
     background: "surface",
-    pressedBackground: "surfaceMuted",
-    border: "borderStrong",
-    labelTone: "primary",
-    iconTone: "textPrimary",
+    pressedBackground: "accentSoft",
+    border: "border",
+    labelTone: "accent",
+    iconTone: "accent",
   },
-  ghost: {
+  tertiary: {
     background: "transparent",
     pressedBackground: "accentSoft",
     border: null,
     labelTone: "accent",
     iconTone: "accent",
+  },
+  destructive: {
+    // Outlined in red rather than filled: destructive actions are often shown
+    // two at a time (Remove and Block), and a screen of solid red would shout
+    // where a red border reads as a clear, restrained warning.
+    background: "surface",
+    pressedBackground: "dangerSoft",
+    border: "danger",
+    labelTone: "danger",
+    iconTone: "danger",
   },
 };
 
@@ -178,7 +203,7 @@ export function Button({
       ) : icon ? (
         <Icon name={icon} size={layout.icon.sm} color={colors[iconTone]} />
       ) : null}
-      <AppText tone={labelTone} style={typography.subheading} numberOfLines={1}>
+      <AppText tone={labelTone} style={typography.button} numberOfLines={1}>
         {label}
       </AppText>
     </Pressable>

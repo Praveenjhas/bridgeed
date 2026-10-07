@@ -8,9 +8,12 @@ export {
 export { Badge, type BadgeProps, type BadgeTone } from "./Badge";
 export {
   BrandMark,
+  PRODUCT_NAME,
   type BrandMarkProps,
   type BrandMarkSize,
+  type BrandMarkVariant,
 } from "./BrandMark";
+export { BrandWordmark, type BrandWordmarkProps } from "./BrandWordmark";
 export {
   Button,
   type ButtonProps,
@@ -18,6 +21,7 @@ export {
   type ButtonVariant,
 } from "./Button";
 export { Card, type CardProps } from "./Card";
+export { CommunityRow, type CommunityRowProps } from "./CommunityRow";
 export { Divider, type DividerProps } from "./Divider";
 export { EmptyState, type EmptyStateProps } from "./EmptyState";
 export { ErrorState, type ErrorStateProps } from "./ErrorState";
@@ -33,4 +37,6 @@ export { PageHeader, type PageHeaderProps } from "./PageHeader";
 export { Screen, type ScreenProps } from "./Screen";
 export { SectionHeading, type SectionHeadingProps } from "./SectionHeading";
 export { SkeletonList, type SkeletonListProps } from "./SkeletonList";
+export { StudentRow, type StudentRowProps } from "./StudentRow";
+export { Tag, type TagProps } from "./Tag";
 export { TextField, type TextFieldProps } from "./TextField";

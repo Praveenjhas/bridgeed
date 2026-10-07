@@ -93,7 +93,7 @@ export function CommunityPostComposer({
           </AppText>
           <Button
             label="Cancel"
-            variant="ghost"
+            variant="tertiary"
             size="sm"
             disabled={isSubmitting}
             onPress={() => setContent("")}

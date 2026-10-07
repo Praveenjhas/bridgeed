@@ -6,7 +6,6 @@ import {
   AppText,
   Avatar,
   Button,
-  Card,
   Divider,
   EmptyState,
   ErrorState,
@@ -30,35 +29,33 @@ function PostBody({ post }: { post: PostDetails }) {
   const { spacing } = useTheme();
 
   return (
-    <Card>
-      <View style={{ gap: spacing.md }}>
-        <View
-          style={{
-            flexDirection: "row",
-            alignItems: "center",
-            gap: spacing.md,
-          }}
-        >
-          <Avatar
-            name={post.author.name}
-            imageUrl={post.author.profileImageUrl}
-          />
-          <View style={{ flex: 1 }}>
-            <AppText variant="subheading" numberOfLines={1}>
-              {post.author.name}
-            </AppText>
-            <AppText variant="caption" tone="muted" numberOfLines={1}>
-              {`@${post.author.username} · ${post.community.name}`}
-            </AppText>
-          </View>
+    <View style={{ gap: spacing.md, paddingBottom: spacing.sm }}>
+      <View
+        style={{
+          flexDirection: "row",
+          alignItems: "center",
+          gap: spacing.md,
+        }}
+      >
+        <Avatar
+          name={post.author.name}
+          imageUrl={post.author.profileImageUrl}
+        />
+        <View style={{ flex: 1 }}>
+          <AppText variant="subheading" numberOfLines={1}>
+            {post.author.name}
+          </AppText>
+          <AppText variant="caption" tone="muted" numberOfLines={1}>
+            {`in ${post.community.name}`}
+          </AppText>
         </View>
-        <AppText>{post.content}</AppText>
-        <Divider />
-        <AppText variant="caption" tone="muted">
-          {`${post.likeCount} likes · ${post.commentCount} comments · ${formatLongDate(post.createdAt)}`}
-        </AppText>
       </View>
-    </Card>
+      <AppText style={{ fontSize: 18, lineHeight: 28 }}>{post.content}</AppText>
+      <Divider spacing="sm" />
+      <AppText variant="caption" tone="muted">
+        {`${post.likeCount} likes · ${post.commentCount} comments · ${formatLongDate(post.createdAt)}`}
+      </AppText>
+    </View>
   );
 }
 

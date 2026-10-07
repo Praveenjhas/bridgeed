@@ -155,7 +155,7 @@ export function OptionList<T>({
       {selectedKey !== null ? (
         <Button
           label={clearLabel}
-          variant="ghost"
+          variant="tertiary"
           size="sm"
           icon="close-outline"
           onPress={onClear}

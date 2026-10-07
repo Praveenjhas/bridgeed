@@ -156,7 +156,7 @@ export function MembershipActions({
         {canLeave ? (
           <Button
             label={isPending ? "Cancel request" : "Leave"}
-            variant="secondary"
+            variant="destructive"
             icon="log-out-outline"
             loading={isActionPending}
             onPress={confirmLeave}

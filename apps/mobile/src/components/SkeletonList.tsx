@@ -10,63 +10,87 @@ export interface SkeletonListProps {
 }
 
 /**
- * Placeholder cards for a first load.
+ * Placeholder rows for a first load.
  *
  * Showing the shape of the content that is coming keeps the layout stable, so
- * nothing jumps when the data arrives.
+ * nothing jumps when the data arrives. They are drawn as editorial rows separated
+ * by hairlines rather than as a stack of cards, matching the feed and directory
+ * they stand in for.
  */
 export function SkeletonList({ count, itemHeight, style }: SkeletonListProps) {
-  const { colors, layout, radius, shadows, spacing } = useTheme();
-  const cards = Array.from({ length: count ?? layout.skeletonCards });
+  const { colors, layout, radius, spacing } = useTheme();
+  const rows = Array.from({ length: count ?? layout.skeletonCards });
 
   return (
     <View
       accessibilityElementsHidden
       importantForAccessibility="no-hide-descendants"
-      style={[{ gap: layout.listGap }, style]}
+      style={[{ gap: spacing.lg }, style]}
     >
-      {cards.map((_, index) => (
-        <View
-          key={index}
-          style={[
-            shadows.card,
-            {
-              height: itemHeight ?? layout.skeletonCardHeight,
-              backgroundColor: colors.surface,
-              borderColor: colors.border,
-              borderWidth: StyleSheet.hairlineWidth,
-              borderRadius: radius.lg,
-              padding: spacing.lg,
-              gap: spacing.md,
-            },
-          ]}
-        >
+      {rows.map((_, index) => (
+        <View key={index} style={{ gap: spacing.md }}>
+          {index > 0 ? (
+            <View
+              style={{
+                height: StyleSheet.hairlineWidth,
+                width: "100%",
+                backgroundColor: colors.borderLight,
+              }}
+            />
+          ) : null}
           <View
-            style={{
-              height: layout.avatar.md,
-              width: layout.avatar.md,
-              borderRadius: radius.pill,
-              backgroundColor: colors.skeleton,
-            }}
-          />
-          <View
-            style={{
-              height: 12,
-              width: "70%",
-              borderRadius: radius.sm,
-              backgroundColor: colors.skeleton,
-            }}
-          />
-          <View
-            style={{
-              height: 12,
-              width: "45%",
-              borderRadius: radius.sm,
-              backgroundColor: colors.skeleton,
-            }}
-          />
+            style={[
+              styles.row,
+              {
+                gap: spacing.md,
+                minHeight: itemHeight ?? layout.skeletonCardHeight / 1.4,
+              },
+            ]}
+          >
+            <View
+              style={{
+                height: layout.avatar.md,
+                width: layout.avatar.md,
+                borderRadius: radius.pill,
+                backgroundColor: colors.skeleton,
+              }}
+            />
+            <View style={{ flex: 1, gap: spacing.sm }}>
+              <View
+                style={{
+                  height: 12,
+                  width: "45%",
+                  borderRadius: radius.sm,
+                  backgroundColor: colors.skeleton,
+                }}
+              />
+              <View
+                style={{
+                  height: 12,
+                  width: "80%",
+                  borderRadius: radius.sm,
+                  backgroundColor: colors.skeleton,
+                }}
+              />
+              <View
+                style={{
+                  height: 12,
+                  width: "60%",
+                  borderRadius: radius.sm,
+                  backgroundColor: colors.skeleton,
+                }}
+              />
+            </View>
+          </View>
         </View>
       ))}
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  row: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+});

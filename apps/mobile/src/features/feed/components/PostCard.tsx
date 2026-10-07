@@ -34,10 +34,13 @@ interface PostActionProps {
   onPress?: () => void;
   isActive?: boolean;
   isPending?: boolean;
+  /** Glyph used when the action is active, for example a filled heart. */
+  activeIcon?: IconName;
 }
 
 function PostAction({
   icon,
+  activeIcon,
   label,
   accessibilityLabel,
   onPress,
@@ -45,6 +48,7 @@ function PostAction({
   isPending = false,
 }: PostActionProps) {
   const { colors, layout, radius, spacing } = useTheme();
+  const tone = isActive ? "accent" : "textMuted";
 
   const content = (
     <>
@@ -52,12 +56,12 @@ function PostAction({
         <ActivityIndicator size="small" color={colors.textMuted} />
       ) : (
         <Icon
-          name={icon}
+          name={isActive ? (activeIcon ?? icon) : icon}
           size={layout.icon.md}
-          tone={isActive ? "danger" : "textSecondary"}
+          tone={tone}
         />
       )}
-      <AppText variant="caption" tone={isActive ? "danger" : "secondary"}>
+      <AppText variant="caption" tone={isActive ? "accent" : "muted"}>
         {label}
       </AppText>
     </>
@@ -68,8 +72,8 @@ function PostAction({
     {
       gap: spacing.xs,
       paddingVertical: spacing.xs,
-      paddingHorizontal: spacing.sm,
-      borderRadius: radius.pill,
+      paddingRight: spacing.lg,
+      borderRadius: radius.sm,
     },
   ];
 
@@ -86,9 +90,7 @@ function PostAction({
       onPress={onPress}
       style={({ pressed }) => [
         layoutStyle,
-        {
-          backgroundColor: pressed ? colors.surfaceMuted : colors.transparent,
-        },
+        { opacity: pressed ? 0.6 : 1 },
         isPending ? { opacity: 0.6 } : null,
       ]}
     >
@@ -137,6 +139,12 @@ export interface PostCardProps<Item extends PostCardItem> {
   isLikePending?: boolean;
   /** Hides the ranking line, for screens where the feed score is irrelevant. */
   showRanking?: boolean;
+  /**
+   * `card` (default) boxes the post on its own surface; `flat` drops the card
+   * chrome so consecutive posts can be separated by a divider instead, which is
+   * how the feed and a community's posts read as one editorial column.
+   */
+  variant?: "card" | "flat";
 }
 
 /**
@@ -152,33 +160,25 @@ export function PostCard<Item extends PostCardItem>({
   onToggleLike,
   isLikePending = false,
   showRanking = true,
+  variant = "flat",
 }: PostCardProps<Item>) {
-  const { spacing } = useTheme();
+  const { colors, spacing } = useTheme();
   const isLiked = item.hasReacted === true;
   const communityName = item.community?.name ?? null;
   const visibleReasons = (item.reasons ?? [])
     .slice(0, MAX_VISIBLE_REASONS)
     .map((reason) => REASON_LABELS[reason] ?? reason);
   const metaParts = [
-    `@${item.author.username}`,
+    communityName ?? `@${item.author.username}`,
     formatRelativeTime(item.createdAt),
   ];
 
-  if (communityName) {
-    metaParts.push(communityName);
-  }
+  const accessibilityLabel = communityName
+    ? `Post by ${item.author.name} in ${communityName}`
+    : `Post by ${item.author.name}`;
 
-  return (
-    <Card
-      onPress={() => onOpen(item)}
-      accessibilityLabel={
-        communityName
-          ? `Post by ${item.author.name} in ${communityName}`
-          : `Post by ${item.author.name}`
-      }
-      accessibilityHint="Opens the post and its comments"
-    >
-      <View style={{ gap: spacing.md }}>
+  const body = (
+    <View style={{ gap: spacing.sm }}>
         <View style={[styles.header, { gap: spacing.md }]}>
           <Avatar
             name={item.author.name}
@@ -201,35 +201,66 @@ export function PostCard<Item extends PostCardItem>({
 
         <AppText>{item.content}</AppText>
 
-        {showRanking && visibleReasons.length > 0 ? (
-          <AppText variant="caption" tone="muted" numberOfLines={1}>
-            {`Ranked for you: ${visibleReasons.join(", ")}`}
-          </AppText>
-        ) : null}
+      {showRanking && visibleReasons.length > 0 ? (
+        <AppText variant="caption" tone="muted" numberOfLines={1}>
+          {`Ranked for you · ${visibleReasons.join(", ")}`}
+        </AppText>
+      ) : null}
 
-        <View style={[styles.footer, { gap: spacing.sm }]}>
-          <PostAction
-            icon={isLiked ? "heart" : "heart-outline"}
-            label={String(item.likeCount)}
-            isActive={isLiked}
-            isPending={isLikePending}
-            accessibilityLabel={
-              isLiked
-                ? `Remove your like, ${item.likeCount} likes`
-                : `Like this post, ${item.likeCount} likes`
-            }
-            onPress={onToggleLike ? () => onToggleLike(item) : undefined}
-          />
-          <PostAction
-            icon="chatbubble-outline"
-            label={String(item.commentCount)}
-            accessibilityLabel={`Open ${item.commentCount} comments`}
-            onPress={() => onOpen(item)}
-          />
-          <View style={styles.spacer} />
-          <Icon name="chevron-forward" size={16} tone="textDisabled" />
-        </View>
+      <View style={[styles.footer, { marginTop: spacing.xxs }]}>
+        <PostAction
+          icon="heart-outline"
+          activeIcon="heart"
+          label={String(item.likeCount)}
+          isActive={isLiked}
+          isPending={isLikePending}
+          accessibilityLabel={
+            isLiked
+              ? `Remove your like, ${item.likeCount} likes`
+              : `Like this post, ${item.likeCount} likes`
+          }
+          onPress={onToggleLike ? () => onToggleLike(item) : undefined}
+        />
+        <PostAction
+          icon="chatbubble-outline"
+          label={String(item.commentCount)}
+          accessibilityLabel={`Open ${item.commentCount} comments`}
+          onPress={() => onOpen(item)}
+        />
       </View>
+    </View>
+  );
+
+  // The flat form is the default for the feed and a community's posts, where
+  // items are separated by a divider rather than each boxed in its own card. It
+  // keeps the post as the unit of content and lets type, colour and space work.
+  if (variant === "flat") {
+    return (
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel={accessibilityLabel}
+        accessibilityHint="Opens the post and its comments"
+        onPress={() => onOpen(item)}
+        style={({ pressed }) => ({
+          gap: spacing.md,
+          // Vertical only: the list already applies the screen gutter, so the
+          // post's content lines up with the header above it.
+          paddingVertical: spacing.lg,
+          backgroundColor: pressed ? colors.surfaceMuted : colors.transparent,
+        })}
+      >
+        {body}
+      </Pressable>
+    );
+  }
+
+  return (
+    <Card
+      onPress={() => onOpen(item)}
+      accessibilityLabel={accessibilityLabel}
+      accessibilityHint="Opens the post and its comments"
+    >
+      {body}
     </Card>
   );
 }

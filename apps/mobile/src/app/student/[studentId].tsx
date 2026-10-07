@@ -3,7 +3,7 @@ import { RefreshControl, ScrollView, StyleSheet, View } from "react-native";
 import { Stack, useLocalSearchParams } from "expo-router";
 import {
   AppText,
-  Card,
+  Avatar,
   Divider,
   EmptyState,
   ErrorState,
@@ -23,7 +23,6 @@ import {
 import {
   formatCourse,
   formatGraduationYear,
-  StudentIdentity,
   TagList,
   useStudentInterests,
   useStudentProfile,
@@ -268,126 +267,130 @@ export default function StudentProfileScreen() {
         }
         contentContainerStyle={{
           padding: layout.screenPadding,
-          gap: spacing.lg,
+          gap: spacing.xxl,
           paddingBottom: spacing.xxxl,
         }}
       >
-        <Card>
-          <View style={{ gap: spacing.md }}>
-            <StudentIdentity
-              name={detail.name}
-              username={detail.username}
-              imageUrl={detail.profileImageUrl}
-              size="lg"
-              nameVariant="title"
-            />
-
-            {detail.bio ? (
-              <AppText tone="secondary">{detail.bio}</AppText>
-            ) : null}
-
-            {facts.length > 0 ? (
-              <View style={{ gap: spacing.md }}>
-                {facts.map((fact) => (
-                  <Fact
-                    key={fact.key}
-                    icon={fact.icon}
-                    label={fact.label}
-                    value={fact.value}
-                  />
-                ))}
-              </View>
-            ) : null}
-
-            <Divider />
-
-            <ConnectionActions
-              state={relationshipState}
-              isChecking={isChecking}
-              readErrorMessage={
-                !isSelf &&
-                relationship.status === "error" &&
-                connectionId === null
-                  ? relationship.errorMessage
-                  : null
-              }
-              onRetryRead={refreshRelationship}
-              isActionPending={isActionPending}
-              actionErrorMessage={actions.actionErrorMessage}
-              onDismissActionError={actions.dismissActionError}
-              onConnect={() => {
-                void actions.sendRequest(studentId);
-              }}
-              onAccept={() => runOnConnection(actions.acceptRequest)}
-              onDecline={() => runOnConnection(actions.rejectRequest)}
-              onCancelRequest={() => runOnConnection(actions.cancelRequest)}
-              onRemoveConnection={() =>
-                runOnConnection(actions.removeConnection)
-              }
-              onBlock={() => runOnConnection(actions.blockConnection)}
-            />
+        {/*
+          A person's academic identity, laid out flat the way a profile page
+          opens: the identity, the facts and the one relationship action in one
+          block, then skills and interests as sections divided by hairlines.
+        */}
+        <View style={{ gap: spacing.lg }}>
+          <Avatar
+            name={detail.name}
+            imageUrl={detail.profileImageUrl}
+            size="xl"
+          />
+          <View style={{ gap: spacing.xxs }}>
+            <AppText variant="title">{detail.name}</AppText>
+            <AppText variant="body" tone="secondary">
+              {`@${detail.username}`}
+            </AppText>
           </View>
-        </Card>
+
+          {detail.bio ? (
+            <AppText tone="secondary">{detail.bio}</AppText>
+          ) : null}
+
+          {facts.length > 0 ? (
+            <View style={{ gap: spacing.md }}>
+              {facts.map((fact) => (
+                <Fact
+                  key={fact.key}
+                  icon={fact.icon}
+                  label={fact.label}
+                  value={fact.value}
+                />
+              ))}
+            </View>
+          ) : null}
+
+          <Divider />
+
+          <ConnectionActions
+            state={relationshipState}
+            isChecking={isChecking}
+            readErrorMessage={
+              !isSelf &&
+              relationship.status === "error" &&
+              connectionId === null
+                ? relationship.errorMessage
+                : null
+            }
+            onRetryRead={refreshRelationship}
+            isActionPending={isActionPending}
+            actionErrorMessage={actions.actionErrorMessage}
+            onDismissActionError={actions.dismissActionError}
+            onConnect={() => {
+              void actions.sendRequest(studentId);
+            }}
+            onAccept={() => runOnConnection(actions.acceptRequest)}
+            onDecline={() => runOnConnection(actions.rejectRequest)}
+            onCancelRequest={() => runOnConnection(actions.cancelRequest)}
+            onRemoveConnection={() => runOnConnection(actions.removeConnection)}
+            onBlock={() => runOnConnection(actions.blockConnection)}
+          />
+        </View>
 
         {/* Skills and interests are their own reads, and their own sections. */}
+        <Divider />
 
-        <Card>
-          <View style={{ gap: spacing.md }}>
-            <SectionHeading
-              title="Skills"
-              hint={
-                skillNames.length > 0
-                  ? `${skillNames.length} listed`
-                  : undefined
-              }
+        <View style={{ gap: spacing.md }}>
+          <SectionHeading
+            title="Skills"
+            hint={
+              skillNames.length > 0
+                ? `${skillNames.length} listed`
+                : undefined
+            }
+          />
+          {skills.status === "error" ? (
+            <InlineError
+              message={skills.errorMessage ?? "Skills could not be loaded."}
+              onRetry={refreshSkills}
             />
-            {skills.status === "error" ? (
-              <InlineError
-                message={skills.errorMessage ?? "Skills could not be loaded."}
-                onRetry={refreshSkills}
-              />
-            ) : skills.status === "loading" && skillNames.length === 0 ? (
-              <AppText variant="caption" tone="muted">
-                Loading skills
-              </AppText>
-            ) : (
-              <TagList
-                names={skillNames}
-                emptyMessage="No skills are listed on this profile."
-              />
-            )}
-          </View>
-        </Card>
+          ) : skills.status === "loading" && skillNames.length === 0 ? (
+            <AppText variant="caption" tone="muted">
+              Loading skills
+            </AppText>
+          ) : (
+            <TagList
+              names={skillNames}
+              emptyMessage="No skills are listed on this profile."
+            />
+          )}
+        </View>
 
-        <Card>
-          <View style={{ gap: spacing.md }}>
-            <SectionHeading
-              title="Interests"
-              hint={
-                interestNames.length > 0
-                  ? `${interestNames.length} listed`
-                  : undefined
+        <Divider />
+
+        <View style={{ gap: spacing.md }}>
+          <SectionHeading
+            title="Interests"
+            hint={
+              interestNames.length > 0
+                ? `${interestNames.length} listed`
+                : undefined
+            }
+          />
+          {interests.status === "error" ? (
+            <InlineError
+              message={
+                interests.errorMessage ?? "Interests could not be loaded."
               }
+              onRetry={refreshInterests}
             />
-            {interests.status === "error" ? (
-              <InlineError
-                message={
-                  interests.errorMessage ?? "Interests could not be loaded."
-                }
-                onRetry={refreshInterests}
-              />
-            ) : interests.status === "loading" && interestNames.length === 0 ? (
-              <AppText variant="caption" tone="muted">
-                Loading interests
-              </AppText>
-            ) : (
-              <TagList
-                names={interestNames}
-                emptyMessage="No interests are listed on this profile."
-              />
-            )}
-          </View>
-        </Card>
+          ) : interests.status === "loading" && interestNames.length === 0 ? (
+            <AppText variant="caption" tone="muted">
+              Loading interests
+            </AppText>
+          ) : (
+            <TagList
+              names={interestNames}
+              emptyMessage="No interests are listed on this profile."
+            />
+          )}
+        </View>
       </ScrollView>
     </Screen>
   );

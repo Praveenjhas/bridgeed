@@ -1,61 +1,73 @@
 /**
- * BridgeEd color tokens.
+ * BridgeEd color tokens — "Campus Editorial".
  *
- * One accent carries the brand; everything else stays on neutral surfaces so the
- * product reads as calm and academic rather than consumer-social. Values are
- * picked so that body copy keeps a comfortable contrast ratio on its surface.
+ * One brand colour (a deep evergreen) carries selection, links and primary
+ * actions; a restrained warm gold is reserved for the brand mark; everything
+ * else stays on warm, paper-like neutrals so the product reads as a modern
+ * university publication rather than a generic SaaS dashboard. Backgrounds are a
+ * warm paper rather than cold grey, primary text is a deep ink green rather than
+ * a blue-black, and the red is muted. Values keep body copy at a comfortable
+ * contrast ratio on its surface.
  */
 export const colors = {
-  /** Primary brand accent, used for selection, links and primary actions. */
-  accent: "#1F5AE0",
-  /** Pressed / emphasized variant of the accent. */
-  accentStrong: "#1748B8",
-  /** Tinted accent background for chips and selected rows. */
-  accentSoft: "#EAF0FE",
+  /** Primary brand colour, used for selection, links and primary actions. */
+  accent: "#126B59",
+  /** Pressed / emphasized variant of the brand colour. */
+  accentStrong: "#0B4D40",
+  /** Tinted brand background for chips and selected rows. */
+  accentSoft: "#E4F0EB",
   /** Foreground color that is safe on top of `accent`. */
   onAccent: "#FFFFFF",
 
-  /** App background behind all surfaces. */
-  background: "#F6F7F9",
+  /** Restrained warm gold, reserved for the brand mark. */
+  gold: "#B9852D",
+  /** Tinted gold background, for the brand mark nodes and warm accents. */
+  goldSoft: "#F4E9D2",
+
+  /** App background behind all surfaces — warm paper, not cold white. */
+  background: "#F7F5EF",
   /** Default card / sheet background. */
   surface: "#FFFFFF",
   /** Secondary background for inset areas such as composer inputs. */
-  surfaceMuted: "#EEF1F5",
+  surfaceMuted: "#EFECE2",
   /** Placeholder blocks while data is loading. */
-  skeleton: "#E8EBF0",
+  skeleton: "#E9E5DA",
 
-  /** Hairline borders and dividers. */
-  border: "#E3E7ED",
+  /** Hairline borders and dividers, warm rather than neutral grey. */
+  border: "#DDD9CF",
+  /** Lighter hairline for dividers between rows of the same group. */
+  borderLight: "#ECE9E1",
   /** Borders that need to stay visible on muted surfaces. */
-  borderStrong: "#CDD4DE",
+  borderStrong: "#CFC9BB",
 
-  /** Primary reading color. */
-  textPrimary: "#131A24",
+  /** Primary reading color — deep ink green. */
+  textPrimary: "#17221D",
   /** Supporting copy such as post bodies and metadata. */
-  textSecondary: "#4A5464",
+  textSecondary: "#59635D",
   /** The quietest text that is still meant to be read. */
-  textMuted: "#6B7686",
+  textMuted: "#7B837D",
   /** Disabled controls. */
-  textDisabled: "#9AA4B2",
+  textDisabled: "#A7AFA9",
 
   /** Positive confirmation. */
-  success: "#1B7F5A",
+  success: "#2E7658",
   /** Tinted background for confirmation chips, such as an active membership. */
-  successSoft: "#E6F4EE",
+  successSoft: "#E4F0EB",
   /** Non blocking warning. */
-  warning: "#B25E09",
+  warning: "#B9852D",
   /** Tinted background for chips that are waiting on something. */
-  warningSoft: "#FBF0E1",
-  /** Destructive action or failure. */
-  danger: "#C0392B",
+  warningSoft: "#F4E9D2",
+  /** Destructive action or failure — a muted, editorial red. */
+  danger: "#B74738",
   /** Tinted background for failure banners and error illustrations. */
-  dangerSoft: "#FDECEA",
+  dangerSoft: "#F6E5E1",
 
   /** Scrim value for overlays. */
-  overlay: "rgba(19, 26, 36, 0.45)",
+  overlay: "rgba(23, 34, 29, 0.5)",
   /** Fully transparent, for conditional styling. */
   transparent: "transparent",
 } as const;
 
 /** Names of every color token, useful for props that take a token name. */
 export type ColorName = keyof typeof colors;
+

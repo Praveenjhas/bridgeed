@@ -1,15 +1,20 @@
 import { useCallback, useMemo } from "react";
-import { FlatList, RefreshControl, View } from "react-native";
+import { FlatList, Pressable, RefreshControl, StyleSheet, View } from "react-native";
 import { router } from "expo-router";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import type { FeedItem } from "@bridgeed/shared";
 import {
+  AppText,
+  Avatar,
+  BrandWordmark,
   Button,
+  Divider,
   EmptyState,
   ErrorState,
   IconButton,
   InlineError,
-  PageHeader,
   Screen,
+  SectionHeading,
   SkeletonList,
 } from "@/components";
 import { resolveApiBaseUrl } from "@/config/env";
@@ -21,7 +26,23 @@ import {
   useFeed,
 } from "@/features/feed";
 import { useActor } from "@/providers/AuthProvider";
+import { useStudentProfileStatus } from "@/providers/StudentProfileProvider";
 import { useTheme } from "@/theme";
+
+/** A time-of-day greeting, so the top of the feed says hello like a person. */
+function greetingFor(date: Date): string {
+  const hour = date.getHours();
+
+  if (hour < 12) {
+    return "Good morning";
+  }
+
+  if (hour < 18) {
+    return "Good afternoon";
+  }
+
+  return "Good evening";
+}
 
 /**
  * Home screen: the ranked feed.
@@ -32,9 +53,14 @@ import { useTheme } from "@/theme";
  */
 export default function FeedScreen() {
   const { colors, layout, spacing } = useTheme();
+  const insets = useSafeAreaInsets();
   const { actorId, isConfigured, detail: actorDetail } = useActor();
+  const { profile } = useStudentProfileStatus();
   const api = useMemo(() => resolveApiBaseUrl(), []);
   const feed = useFeed(actorId);
+
+  const firstName = profile?.name.trim().split(/\s+/)[0] ?? "there";
+  const greeting = greetingFor(new Date());
 
   const openPost = useCallback((item: FeedItem) => {
     router.push({ pathname: "/post/[postId]", params: { postId: item.id } });
@@ -44,10 +70,15 @@ export default function FeedScreen() {
     router.push("/create-post");
   }, []);
 
+  const openProfile = useCallback(() => {
+    router.push("/(tabs)/profile");
+  }, []);
+
   const renderItem = useCallback(
     ({ item }: { item: FeedItem }) => (
       <PostCard
         item={item}
+        variant="flat"
         onOpen={openPost}
         onToggleLike={feed.toggleLike}
         isLikePending={feed.pendingLikeIds.has(item.id)}
@@ -56,27 +87,39 @@ export default function FeedScreen() {
     [feed.pendingLikeIds, feed.toggleLike, openPost],
   );
 
+  // The home header is an editorial masthead: the wordmark and the reader's own
+  // face, then a greeting and the question the composer answers. No page title
+  // and no bar, so the feed opens like the front of a publication.
   const header = (
-    <PageHeader
-      title="Feed"
-      subtitle="Ranked from your communities, connections and skills"
-      showWordmark
-      actions={
-        <>
-          <IconButton
-            icon="add"
-            accessibilityLabel="Create a post"
-            onPress={openCreatePost}
+    <View
+      style={{
+        paddingTop: insets.top + spacing.lg,
+        paddingHorizontal: layout.screenPadding,
+        gap: spacing.xl,
+      }}
+    >
+      <View style={styles.masthead}>
+        <BrandWordmark size="md" />
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Open your profile"
+          onPress={openProfile}
+          hitSlop={spacing.sm}
+        >
+          <Avatar
+            name={profile?.name ?? "You"}
+            imageUrl={profile?.profileImageUrl}
+            size="md"
           />
-          <IconButton
-            icon="refresh"
-            accessibilityLabel="Refresh the feed"
-            onPress={feed.refresh}
-            disabled={feed.isRefreshing}
-          />
-        </>
-      }
-    />
+        </Pressable>
+      </View>
+      <View style={{ gap: spacing.xs }}>
+        <AppText variant="title">{`${greeting}, ${firstName}`}</AppText>
+        <AppText variant="body" tone="secondary">
+          What&apos;s happening on campus?
+        </AppText>
+      </View>
+    </View>
   );
 
   if (!isConfigured) {
@@ -164,7 +207,7 @@ export default function FeedScreen() {
           />
         }
         ListHeaderComponent={
-          <View style={{ gap: layout.listGap }}>
+          <View style={{ gap: spacing.lg }}>
             <FeedComposePrompt onPress={openCreatePost} />
             {feed.pageMeta ? <FeedSummary meta={feed.pageMeta} /> : null}
             {feed.actionErrorMessage ? (
@@ -173,6 +216,17 @@ export default function FeedScreen() {
                 onDismiss={feed.dismissActionError}
               />
             ) : null}
+            <SectionHeading
+              title="Your feed"
+              action={
+                <IconButton
+                  icon="refresh"
+                  accessibilityLabel="Refresh the feed"
+                  onPress={feed.refresh}
+                  disabled={feed.isRefreshing}
+                />
+              }
+            />
           </View>
         }
         ListFooterComponent={
@@ -182,12 +236,22 @@ export default function FeedScreen() {
             itemCount={feed.items.length}
           />
         }
+        // Posts are separated by a hairline rather than by a gap between cards,
+        // so the feed reads as one continuous editorial column.
+        ItemSeparatorComponent={() => <Divider />}
         contentContainerStyle={{
           padding: layout.screenPadding,
-          gap: layout.listGap,
           paddingBottom: spacing.xxxl,
         }}
       />
     </Screen>
   );
 }
+
+const styles = StyleSheet.create({
+  masthead: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+});

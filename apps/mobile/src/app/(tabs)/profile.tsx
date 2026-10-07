@@ -1,27 +1,22 @@
 import { useMemo, useState } from "react";
 import { RefreshControl, ScrollView, StyleSheet, View } from "react-native";
 import { router } from "expo-router";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import {
   AppText,
+  Avatar,
   Button,
-  Card,
   Divider,
   EmptyState,
   ErrorState,
   Icon,
   InlineError,
   LoadingState,
-  PageHeader,
   Screen,
   SectionHeading,
   type IconName,
 } from "@/components";
-import {
-  formatCourse,
-  formatGraduationYear,
-  StudentIdentity,
-  TagList,
-} from "@/features/students";
+import { formatCourse, formatGraduationYear, TagList } from "@/features/students";
 import { useAuth } from "@/providers/AuthProvider";
 import { useStudentProfileStatus } from "@/providers/StudentProfileProvider";
 import { useTheme } from "@/theme";
@@ -64,6 +59,7 @@ function Fact({ icon, label, value }: FactProps) {
  */
 export default function ProfileScreen() {
   const { colors, layout, spacing } = useTheme();
+  const insets = useSafeAreaInsets();
   const { user, logout } = useAuth();
   const { status, profile, errorMessage, refresh } = useStudentProfileStatus();
   const [isSigningOut, setIsSigningOut] = useState(false);
@@ -177,10 +173,10 @@ export default function ProfileScreen() {
 
   return (
     <Screen>
-      <PageHeader title="Profile" subtitle="How classmates see you" />
       <ScrollView
         contentContainerStyle={{
-          padding: spacing.lg,
+          paddingHorizontal: layout.screenPadding,
+          paddingTop: insets.top + spacing.lg,
           paddingBottom: spacing.xxxl,
         }}
         refreshControl={
@@ -197,117 +193,125 @@ export default function ProfileScreen() {
             width: "100%",
             maxWidth: layout.maxContentWidth,
             alignSelf: "center",
-            gap: spacing.lg,
+            gap: spacing.xxl,
           }}
         >
-          <Card>
+          {/*
+            The identity is a flat block, the way a printed profile opens, rather
+            than one more rounded card; the rest of the screen is sections divided
+            by hairlines instead of a stack of boxes.
+          */}
+          <View style={{ gap: spacing.lg }}>
             <View style={{ gap: spacing.md }}>
-              <StudentIdentity
+              <Avatar
                 name={profile.name}
-                username={profile.username}
                 imageUrl={profile.profileImageUrl}
-                size="lg"
-                nameVariant="title"
+                size="xl"
               />
-
-              {facts.length > 0 ? (
-                <View style={{ gap: spacing.md }}>
-                  {facts.map((fact) => (
-                    <Fact
-                      key={fact.key}
-                      icon={fact.icon}
-                      label={fact.label}
-                      value={fact.value}
-                    />
-                  ))}
-                </View>
-              ) : null}
-
-              <Divider />
-              <Button
-                label="Edit profile"
-                icon="create-outline"
-                variant="secondary"
-                fullWidth
-                onPress={() => router.push("/profile/edit")}
-              />
-            </View>
-          </Card>
-
-          <Card>
-            <View style={{ gap: spacing.sm }}>
-              <SectionHeading title="About" />
-              {profile.bio ? (
-                <AppText tone="secondary">{profile.bio}</AppText>
-              ) : (
-                <AppText variant="caption" tone="muted">
-                  No bio yet. Add one from Edit profile.
-                </AppText>
-              )}
-            </View>
-          </Card>
-
-          <Card>
-            <View style={{ gap: spacing.md }}>
-              <SectionHeading
-                title="Skills"
-                hint={
-                  skillNames.length > 0
-                    ? `${skillNames.length} listed`
-                    : undefined
-                }
-              />
-              <TagList
-                names={skillNames}
-                emptyMessage="No skills are listed yet."
-              />
-            </View>
-          </Card>
-
-          <Card>
-            <View style={{ gap: spacing.md }}>
-              <SectionHeading
-                title="Interests"
-                hint={
-                  interestNames.length > 0
-                    ? `${interestNames.length} listed`
-                    : undefined
-                }
-              />
-              <TagList
-                names={interestNames}
-                emptyMessage="No interests are listed yet."
-              />
-            </View>
-          </Card>
-
-          <Card>
-            <View style={{ gap: spacing.md }}>
-              <SectionHeading title="Account" />
               <View style={{ gap: spacing.xxs }}>
-                <AppText variant="overline" tone="muted">
-                  Signed in as
-                </AppText>
-                <AppText variant="bodyStrong">
-                  {user?.email ?? "Not signed in"}
+                <AppText variant="title">{profile.name}</AppText>
+                <AppText variant="body" tone="secondary">
+                  {`@${profile.username}`}
                 </AppText>
               </View>
-              {signOutError !== null ? (
-                <InlineError
-                  message={signOutError}
-                  onDismiss={() => setSignOutError(null)}
-                />
-              ) : null}
-              <Button
-                label="Sign out"
-                icon="log-out-outline"
-                variant="secondary"
-                fullWidth
-                onPress={handleSignOut}
-                loading={isSigningOut}
-              />
             </View>
-          </Card>
+
+            {facts.length > 0 ? (
+              <View style={{ gap: spacing.md }}>
+                {facts.map((fact) => (
+                  <Fact
+                    key={fact.key}
+                    icon={fact.icon}
+                    label={fact.label}
+                    value={fact.value}
+                  />
+                ))}
+              </View>
+            ) : null}
+
+            <Button
+              label="Edit profile"
+              icon="create-outline"
+              variant="secondary"
+              fullWidth
+              onPress={() => router.push("/profile/edit")}
+            />
+          </View>
+
+          <Divider />
+
+          <View style={{ gap: spacing.sm }}>
+            <SectionHeading title="About" />
+            {profile.bio ? (
+              <AppText tone="secondary">{profile.bio}</AppText>
+            ) : (
+              <AppText variant="caption" tone="muted">
+                No bio yet. Add one from Edit profile.
+              </AppText>
+            )}
+          </View>
+
+          <Divider />
+
+          <View style={{ gap: spacing.md }}>
+            <SectionHeading
+              title="Skills"
+              hint={
+                skillNames.length > 0
+                  ? `${skillNames.length} listed`
+                  : undefined
+              }
+            />
+            <TagList
+              names={skillNames}
+              emptyMessage="No skills are listed yet."
+            />
+          </View>
+
+          <Divider />
+
+          <View style={{ gap: spacing.md }}>
+            <SectionHeading
+              title="Interests"
+              hint={
+                interestNames.length > 0
+                  ? `${interestNames.length} listed`
+                  : undefined
+              }
+            />
+            <TagList
+              names={interestNames}
+              emptyMessage="No interests are listed yet."
+            />
+          </View>
+
+          <Divider />
+
+          <View style={{ gap: spacing.md }}>
+            <SectionHeading title="Account" />
+            <View style={{ gap: spacing.xxs }}>
+              <AppText variant="overline" tone="muted">
+                Signed in as
+              </AppText>
+              <AppText variant="bodyStrong">
+                {user?.email ?? "Not signed in"}
+              </AppText>
+            </View>
+            {signOutError !== null ? (
+              <InlineError
+                message={signOutError}
+                onDismiss={() => setSignOutError(null)}
+              />
+            ) : null}
+            <Button
+              label="Sign out"
+              icon="log-out-outline"
+              variant="secondary"
+              fullWidth
+              onPress={handleSignOut}
+              loading={isSigningOut}
+            />
+          </View>
         </View>
       </ScrollView>
     </Screen>

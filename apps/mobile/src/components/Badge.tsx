@@ -53,7 +53,9 @@ export function Badge({ label, tone = "neutral", icon, style }: BadgeProps) {
         styles.base,
         {
           backgroundColor: colors[tokens.background],
-          borderRadius: radius.pill,
+          // A small radius, not a pill: a badge labels a state, and a pill on
+          // every state turns a screen into a row of lozenges.
+          borderRadius: radius.sm,
           gap: spacing.xs,
           paddingVertical: spacing.xxs,
           paddingHorizontal: spacing.sm,
@@ -64,7 +66,7 @@ export function Badge({ label, tone = "neutral", icon, style }: BadgeProps) {
       {icon ? (
         <Icon name={icon} size={layout.icon.sm} tone={tokens.icon} />
       ) : null}
-      <AppText variant="overline" tone={tokens.text} numberOfLines={1}>
+      <AppText variant="label" tone={tokens.text} numberOfLines={1}>
         {label}
       </AppText>
     </View>
